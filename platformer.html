@@ -1,0 +1,186 @@
+<html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    body,
+    html {
+        background-color: black;
+        height: 100%;
+    }
+
+    canvas {
+        padding: 0;
+        margin: auto;
+        display: block;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-size: 100% 100%;
+    }
+</style>
+
+<head>
+
+</head>
+
+<body>
+    <canvas id="canvas" width="640" height="480">
+    </canvas>
+    <script type="module">
+        import game from "./engine.js";
+        import { Circle, Particule, Sound, control2DCross, intersects, isInside, ensurePositionInside, moveOutside, randomAmplitude, randomColor, Geometry } from "./engine.js";
+
+        class Tree {
+            constructor({ x, y }) {
+                const r = 16 + randomAmplitude(8);
+                for (let i = 0; i < 4; i++)
+                    new Circle({ x: x + randomAmplitude(16), y: y + 16 + randomAmplitude(16), z: -1, color: randomColor(128, 255, 0), r: 12 });
+
+                new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 });
+                new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r })
+                obstacles.push(new Circle({ x, y: y + 8, z: -0.5, color: '#FFFFFF00', r: 12 }));
+            }
+        }
+
+
+        class Cloud {
+            constructor({ x, y, r = 100 }) {
+                const c = new Circle({ x, y, r, z: 10, color: "#FFFFFF22" });
+                c.live = () => {
+                    c.position.x += randomAmplitude(5);
+                    c.position.y += randomAmplitude(5);
+                }
+            }
+        }
+
+
+        const gravity = 9
+        const speed = 2
+        class Player extends Circle {
+            constructor({ x, y }) {
+                super({
+                    x, y, z: 0, color: "yellow", r: 16,
+                    pv: 3, coin: 0,
+                    live: () => { if (this.platformCurrent == undefined) this.acceleration.y = Math.min(3, this.acceleration.y + 0.2) }
+                })
+            }
+            left() { this.speed = { x: -speed, y: 0 }; }
+            right() { this.speed = { x: speed, y: 0 }; }
+            up() { if (this.platformCurrent) this.acceleration = { x: 0, y: -5 }; }
+            down() { }
+        }
+
+
+        const obstacles = [];
+        const enemies = [];
+        const coins = new Set();
+
+
+        new Circle({ x: 0, y: 0, z: -1, color: "lightblue", r: 1280 });
+
+        const player = new Player({ x: 0, y: -200 });
+
+        let x = 0;
+        let y = 0;
+        const platform = new Circle({ x, y, color: "green", r: 128 });
+        obstacles.push(platform);
+
+        for (let i = 0; i < 10; i++) {
+            x += 150 + randomAmplitude(50);
+            y -= 32 + randomAmplitude(32);
+            const xx = x;
+            const yy = y;
+            const r = 64 + randomAmplitude(32);
+            const platform = new Circle({ x, y, color: randomColor(0, 192, 0), r });
+            obstacles.push(platform);
+
+            const shift = randomAmplitude(2);
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            const enemy = new Circle({
+                x, y, z:1, color: randomColor(255, 0, 0), r: 16,
+                live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r, shift + direction * game.time / 400) }
+            })
+
+            const coin = new Circle({
+                x: x, y: y - r - 50, color: "yellow", stroke: "black", r: 8,
+                live: () => {
+                    coin.r = 8 + randomAmplitude(1);
+                }
+            });
+            coins.add(coin);
+
+            new Cloud({x, y:y-300});
+
+            enemies.push(enemy)
+
+        }
+        const winZone = new Circle({ x: x + 150 + randomAmplitude(100), y, color: "blue", r: 32 });
+        function reset() {
+            player.position = { x: 0, y: -200 };
+            player.pv = 3;
+        }
+
+
+
+        game.live = (ctx) => {
+            game.cameraAttach(player);
+            control2DCross(player, { speed: 3 });
+            player.platformCurrent = undefined;
+            for (const obstacle of obstacles) {
+                if (intersects(player, obstacle)) {
+                    moveOutside(player, obstacle);
+                    player.platformCurrent = obstacle;
+                }
+            }
+
+            for (const coin of coins) {
+                if (intersects(player, coin)) {
+                    coin.delete();
+                    coins.delete(coin);
+                    player.coin++;
+                }
+            }
+            for (const enemy of enemies)
+                if (intersects(player, enemy)) {
+                    moveOutside(player, enemy);
+                    if (!player.hurt) {
+                        for (let i = 0; i < 5; i++)
+                            new Particule({ x: player.position.x, y: player.position.y, color: "red" });
+                        player.pv--;
+                    }
+                    setTimeout(() => player.hurt = false, 1000);
+                    player.hurt = true;
+                }
+
+            if (intersects(player, winZone)) {
+                reset();
+            }
+            if (player.pv == 0 || player.y > 0) {
+                player.coins = 0;
+                reset();
+            }
+        }
+
+
+        game.drawFixed = (ctx) => {
+            for (let i = 0; i < player.pv; i++) {
+                ctx.fillStyle = "red";
+                ctx.disk(16 + 24 * i, 16, 10);
+            }
+
+            ctx.fillStyle = "yellow";
+            ctx.disk(200, 16, 10);
+            ctx.fillStyle = "black";
+            ctx.fillText("x " + player.coin, 214, 20);
+        }
+    </script>
+</body>
+
+</html>

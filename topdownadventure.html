@@ -1,0 +1,187 @@
+<html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    body,
+    html {
+        background-color: black;
+        height: 100%;
+    }
+
+    canvas {
+        padding: 0;
+        margin: auto;
+        display: block;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-size: 100% 100%;
+    }
+</style>
+
+<head>
+
+</head>
+
+<body>
+    <canvas id="canvas" width="640" height="480">
+    </canvas>
+    <script type="module">
+        import game from "./engine.js";
+        import { Circle, Particule, Sound, control2DCross, intersects, isInside, ensurePositionInside, bounce, randomAmplitude, randomColor, Geometry } from "./engine.js";
+
+        class Tree {
+            constructor({ x, y }) {
+                const r = 16 + randomAmplitude(8);
+                for (let i = 0; i < 4; i++)
+                    new Circle({ x: x + randomAmplitude(16), y: y + 16 + randomAmplitude(16), z: -1, color: randomColor(128, 255, 0), r: 12 });
+
+                new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 });
+                new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r })
+                obstacles.push(new Circle({ x, y: y + 8, z: -0.5, color: '#FFFFFF00', r: 12 }));
+            }
+        }
+
+
+        class Cloud {
+            constructor({ x, y }) {
+                const c = new Circle({ x, y, r: 100, z: 10, color: "#FFFFFF22" });
+                c.live = () => {
+                    c.position.x += randomAmplitude(5);
+                    c.position.y += randomAmplitude(5);
+                }
+            }
+        }
+
+
+        const speed = 2;
+
+        class Player extends Circle {
+            constructor({ x, y }) {
+                super({ x, y, r: 8, color: "orange", stroke: "black", live: () => { player.color = player.hurt ? "#FF880088" : "#FF8800"; }, pv: 3, coin: 0 });
+            }
+            left() { this.speed = { x: -speed, y: 0 }; }
+            right() { this.speed = { x: speed, y: 0 }; }
+            up() { this.speed = { x: 0, y: -speed }; }
+            down() { this.speed = { x: 0, y: speed }; }
+        }
+
+        new Circle({ x: 0, y: 0, z: -3, color: "cyan", r: 3000 });
+
+        const obstacles = [];
+        const enemies = [];
+        const islands = [];
+        const coins = new Set();
+
+        let x = 0;
+        let y = 0;
+        for (let i = 0; i < 10; i++) {
+            const r = 250 + Math.random() * 130;
+            x += r * 0.8;
+            const xx = x;
+            const yy = y;
+            const island = new Circle({ x: x, y: y, z: -2, color: "lightgreen", r: r });
+
+            for (let j = 0; j <= 30; j++)
+                new Tree(Geometry.pointFromCenterRadiusAngle(x, y, randomAmplitude(2 * r), randomAmplitude(2 * Math.PI)))
+
+            for (let j = 0; j <= 20; j++)
+                new Cloud(Geometry.pointFromCenterRadiusAngle(x, y, randomAmplitude(3 * r), randomAmplitude(2 * Math.PI)))
+
+            islands.push(island);
+            const enemy = new Circle({ x: x, y: y, color: "purple", stroke: "black", r: 8 });
+            const angleInitial = Math.random();
+            const angleRInitial = Math.random();
+            const direction = Math.random() < 0.5 ? -1 : 1;
+            enemy.live = () => {
+                const rC = r * (Math.cos(angleRInitial + game.time / 2000));
+                enemy.position.x = xx + rC * Math.cos(angleInitial + direction * game.time / 4000);
+                enemy.position.y = yy + rC * Math.sin(angleInitial + direction * game.time / 4000);
+            }
+            enemies.push(enemy);
+
+            const angleInitial2 = Math.random();
+
+            const coin = new Circle({
+                x: x, y: y, color: "yellow", stroke: "black", r: 8, live: () => {
+                    const rC = r;
+                    coin.position.y = yy + rC * Math.cos(angleInitial2 + game.time / 3000);
+                }
+            });
+            coins.add(coin);
+
+
+            x += r * 0.5;
+            y += -10 + Math.random() * r;
+        }
+
+
+        const winZone = new Circle({ x, y, color: "blue", r: 32 });
+        const player = new Player({ x: 0, y: 0 });
+
+        function reset() {
+            player.position = { x: 0, y: 0 };
+            player.pv = 3;
+        }
+
+        game.live = (ctx) => {
+            game.cameraAttach(player);
+            control2DCross(player, { speed: 3 });
+            ensurePositionInside(player, islands);
+
+            for (const obstacle of obstacles) {
+                if (intersects(player, obstacle))
+                    bounce(player, obstacle);
+            }
+
+            for (const coin of coins) {
+                if (intersects(player, coin)) {
+                    coin.delete();
+                    coins.delete(coin);
+                    player.coin++;
+                }
+            }
+            for (const enemy of enemies)
+                if (intersects(player, enemy)) {
+                    bounce(player, enemy);
+                    if (!player.hurt) {
+                        for (let i = 0; i < 5; i++)
+                            new Particule({ x: player.position.x, y: player.position.y, color: "red" });
+                        player.pv--;
+                    }
+                    setTimeout(() => player.hurt = false, 1000);
+                    player.hurt = true;
+                }
+
+            if (intersects(player, winZone)) {
+                reset();
+            }
+            if (player.pv == 0) {
+                player.coins = 0;
+                reset();
+            }
+        }
+
+
+        game.drawFixed = (ctx) => {
+            for (let i = 0; i < player.pv; i++) {
+                ctx.fillStyle = "red";
+                ctx.disk(16 + 24 * i, 16, 10);
+            }
+
+            ctx.fillStyle = "yellow";
+            ctx.disk(200, 16, 10);
+            ctx.fillStyle = "black";
+            ctx.fillText("x " + player.coin, 214, 20);
+        }
+    </script>
+</body>
+
+</html>
