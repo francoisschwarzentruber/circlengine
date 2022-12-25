@@ -42,6 +42,9 @@ try {
 
     elementButton.onmousedown = () => Game.keys[" "] = true;
     elementButton.onmouseup = () => Game.keys[" "] = false;
+
+    elementButton.ontouchstart = () => Game.keys[" "] = true;
+    elementButton.ontouchend = () => Game.keys[" "] = false;
 }
 catch (e) {
     alert(e)
