@@ -162,7 +162,8 @@
             if (intersects(player, winZone)) {
                 reset();
             }
-            if (player.pv == 0 || player.y > 0) {
+            console.log(player.y)
+            if (player.pv == 0 || player.position.y > 100) {
                 player.coins = 0;
                 reset();
             }
