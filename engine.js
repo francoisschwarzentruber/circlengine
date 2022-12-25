@@ -4,6 +4,33 @@ window.onkeyup = (evt) => Game.keys[evt.key] = false;
 const ctx = canvas.getContext("2d");
 const beginningTime = Date.now();
 
+try {
+    let s = nipplejs.create({
+        zone: document.body,
+        mode: 'dynamic',
+        position: { left: '50%', top: '50%' },
+        color: 'red'
+    });
+
+    s.on("move", (evt, nipple) => {
+        console.log(nipple.angle.degree)
+        const THRESHOLD = 32;
+        Game.keys["ArrowUp"] = (Math.abs(nipple.angle.degree - 90) < THRESHOLD);
+        Game.keys["ArrowDown"] = (Math.abs(nipple.angle.degree - 270) < THRESHOLD);
+        Game.keys["ArrowLeft"] = (Math.abs(nipple.angle.degree - 180) < THRESHOLD);
+        Game.keys["ArrowRight"] = (Math.abs(nipple.angle.degree - 0) < THRESHOLD) || (Math.abs(nipple.angle.degree - 360) < THRESHOLD);
+    });
+    s.on("end", (evt, nipple) => {
+        Game.keys["ArrowUp"] = false;
+        Game.keys["ArrowDown"] = false;
+        Game.keys["ArrowLeft"] = false;
+        Game.keys["ArrowRight"] = false;
+    });
+}
+catch (e) {
+    alert(e)
+}
+
 
 export class PhysicalObject {
     position;

@@ -1,32 +1,32 @@
 <html>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-    }
-
-    body,
-    html {
-        background-color: black;
-        height: 100%;
-    }
-
-    canvas {
-        padding: 0;
-        margin: auto;
-        display: block;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-size: 100% 100%;
-    }
-</style>
-
 <head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body,
+        html {
+            background-color: black;
+            height: 100%;
+        }
+
+        canvas {
+            padding: 0;
+            margin: auto;
+            display: block;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-size: 100% 100%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.0/nipplejs.min.js"></script>
 
 </head>
 
@@ -104,7 +104,7 @@
             const shift = randomAmplitude(2);
             const direction = Math.random() > 0.5 ? 1 : -1;
             const enemy = new Circle({
-                x, y, z:1, color: randomColor(255, 0, 0), r: 16,
+                x, y, z: 1, color: randomColor(255, 0, 0), r: 16,
                 live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r, shift + direction * game.time / 400) }
             })
 
@@ -116,7 +116,7 @@
             });
             coins.add(coin);
 
-            new Cloud({x, y:y-300});
+            new Cloud({ x, y: y - 300 });
 
             enemies.push(enemy)
 
