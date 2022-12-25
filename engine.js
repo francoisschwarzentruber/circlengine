@@ -5,8 +5,21 @@ const ctx = canvas.getContext("2d");
 const beginningTime = Date.now();
 
 try {
+    const elementNippleJS = document.createElement("div");
+    elementNippleJS.style.width = "50%";
+    elementNippleJS.style.height = "100%";
+    elementNippleJS.style.position = "absolute";
+    document.body.appendChild(elementNippleJS);
+
+    const elementButton = document.createElement("div");
+    elementButton.style.width = "50%";
+    elementButton.style.left = "50%";
+    elementButton.style.height = "100%";
+    elementButton.style.position = "absolute";
+    document.body.appendChild(elementButton);
+
     let s = nipplejs.create({
-        zone: document.body,
+        zone: elementNippleJS,
         mode: 'dynamic',
         position: { left: '50%', top: '50%' },
         color: 'red'
@@ -26,6 +39,9 @@ try {
         Game.keys["ArrowLeft"] = false;
         Game.keys["ArrowRight"] = false;
     });
+
+    elementButton.onmousedown = () => Game.keys[" "] = true;
+    elementButton.onmouseup = () => Game.keys[" "] = false;
 }
 catch (e) {
     alert(e)
@@ -286,6 +302,8 @@ export function control2DCross(object) {
         object.up();
     if (Game.keys["ArrowDown"])
         object.down();
+    if (Game.keys[" "])
+        object.action();
 }
 
 export function randomAmplitude(a) { return (Math.random() - 0.5) * a; }

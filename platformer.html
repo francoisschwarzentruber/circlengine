@@ -73,8 +73,9 @@
             }
             left() { this.speed = { x: -speed, y: 0 }; }
             right() { this.speed = { x: speed, y: 0 }; }
-            up() { if (this.platformCurrent) this.acceleration = { x: 0, y: -5 }; }
+            up() { }
             down() { }
+            action() { if (this.platformCurrent) this.acceleration = { x: 0, y: -5 }; }
         }
 
 
