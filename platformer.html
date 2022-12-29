@@ -37,18 +37,6 @@
         import game from "./engine.js";
         import { Circle, Particule, Sound, control2DCross, intersects, isInside, ensurePositionInside, moveOutside, randomAmplitude, randomColor, Geometry } from "./engine.js";
 
-        class Tree {
-            constructor({ x, y }) {
-                const r = 16 + randomAmplitude(8);
-                for (let i = 0; i < 4; i++)
-                    new Circle({ x: x + randomAmplitude(16), y: y + 16 + randomAmplitude(16), z: -1, color: randomColor(128, 255, 0), r: 12 });
-
-                new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 });
-                new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r })
-                obstacles.push(new Circle({ x, y: y + 8, z: -0.5, color: '#FFFFFF00', r: 12 }));
-            }
-        }
-
 
         class Cloud {
             constructor({ x, y, r = 100 }) {
@@ -62,117 +50,257 @@
 
 
         const gravity = 9
-        const speed = 2
-        class Player extends Circle {
-            constructor({ x, y }) {
+        const speed = 2;
+
+        class MisterSaturn extends Circle {
+            constructor({ x, y, color }) {
                 super({
-                    x, y, z: 0, color: "yellow", r: 16,
+                    x, y, z: 0, color, r: 16,
                     pv: 3, coin: 0,
-                    live: () => {
-                        if (this.platformCurrent == undefined)
-                            this.acceleration.y = Math.min(3, this.acceleration.y + 0.2);
-                        else
-                            this.acceleration.y = 0;
-                        this.r = 16 - this.acceleration.y / 4;
-                        this.eye.position = { x: this.position.x + this.direction * 5, y: this.position.y - 5 };
 
-                        this.eyeInside.position = {
-                            x: this.position.x + this.direction * 8 + Math.cos(game.time / 300),
-                            y: this.position.y - 5 + Math.sin(game.time / 300)
-                        };
-
-                        this.noise.position = { x: this.position.x + this.direction * 16, y: this.position.y };
-                    }
                 });
                 this.direction = 1;
                 this.eye = new Circle({ x, y, r: 6, z: 1, color: "white", stroke: "black" });
                 this.eyeInside = new Circle({ x, y, r: 3, z: 2, color: "black" });
-                this.noise = new Circle({ x, y, r: 5, z: 1, color: "yellow" });
+                this.noise = new Circle({ x, y, r: 5, z: 1, color });
+
             }
-            left() { this.direction = -1; this.speed = { x: -speed, y: 0 }; }
-            right() { this.direction = 1; this.speed = { x: speed, y: 0 }; }
+
+            live() {
+                if (this.platformCurrent == undefined)
+                    this.acceleration.y = Math.min(3, this.acceleration.y + 0.2);
+                else
+                    this.acceleration.y = 0;
+                this.r = 16 - this.acceleration.y / 4;
+                this.eye.position = { x: this.position.x + this.direction * 5, y: this.position.y - 5 };
+
+                this.eyeInside.position = {
+                    x: this.position.x + this.direction * 8 + Math.cos(game.time / 300),
+                    y: this.position.y - 5 + Math.sin(game.time / 300)
+                };
+
+                this.noise.position = { x: this.position.x + this.direction * 16, y: this.position.y };
+
+
+            }
+            
+            go(d) {
+                this.direction = d;
+                if (this.platformCurrent) {
+                    const a = Math.atan2(this.position.y - this.platformCurrent.position.y, this.position.x - this.platformCurrent.position.x)
+                    this.speed = Geometry.add(this.speed, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
+                }
+                else
+                    this.speed = { x: speed * d, y: 0 };
+            }
+            left() { this.go(-1); }
+            right() { this.go(1); }
             up() { }
             down() { }
-            action() { if (this.platformCurrent) this.acceleration = { x: 0, y: -5 }; }
+            action() {
+                if (this.platformCurrent) {
+                    this.acceleration = { x: 0, y: -5 };
+                    this.speed = { x: 0, y: 0 };
+                }
+            }
         }
 
 
-        const obstacles = [];
-        const enemies = [];
-        const coins = new Set();
 
-
-        new Circle({ x: 0, y: 0, z: -1, color: "lightblue", r: 1280 });
-
-        const player = new Player({ x: 0, y: -200 });
-
-        let x = 0;
-        let y = 0;
-        const platform = new Circle({ x, y, color: "green", r: 128 });
-        obstacles.push(platform);
-
-        for (let i = 0; i < 10; i++) {
-            x += 150 + randomAmplitude(50);
-            y -= 32 + randomAmplitude(32);
-            const xx = x;
-            const yy = y;
-            const r = 64 + randomAmplitude(32);
-            const platform = new Circle({ x, y, color: randomColor(0, 192, 0), r });
-
-            const nbConcentricCircles = 6;
-            for (let i = 0; i < nbConcentricCircles; i++) {
-                new Circle({ x: x + randomAmplitude(10), y: y, color: randomColor(0, 192, 0), r: r - i * r / nbConcentricCircles })
+        class PNJ extends MisterSaturn {
+            constructor({ x, y }) {
+                super({ x, y, color: "green" });
+                this.direction = 1;
             }
-            obstacles.push(platform);
 
-            const shift = randomAmplitude(2);
+            live() {
+                super.live();
+                if (this.platformCurrent) {
+                    const a = Geometry.angleBetween(this, this.platformCurrent);
+
+                    if (this.direction * (a - Math.PI / 2) > Math.PI / 5)
+                        this.direction = -this.direction;
+
+                    if (this.direction < 0)
+                        this.left();
+                    else
+                        this.right();
+                }
+            }
+
+        }
+
+
+
+
+
+        class Vortex extends Circle {
+            constructor({ x, y }) {
+                super({ x, y, color: "blue", r: 32 });
+            }
+
+            draw(ctx) {
+                super.draw(ctx);
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillStyle = randomColor(128, 0, 255);
+                    ctx.disk(this.position.x, this.position.y, this.r * (8 - i) / 8);
+                }
+            }
+        }
+
+
+
+
+        let obstacles = [];
+        let enemies = [];
+        let coins = new Set();
+        let misters = [];
+
+
+        function createEnemyBlob(platform, angle) {
+            const ennemyR = 6;
             const direction = Math.random() > 0.5 ? 1 : -1;
 
-            const ennemyR = 16;
-            const enemy = new Circle({
-                x, y, z: 1, color: randomColor(255, 0, 0), r: ennemyR,
-                live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r - ennemyR / 2, shift + direction * game.time / 400) }
-            })
-            enemies.push(enemy)
-
-            if (Math.random() > 0.5) {
+            for (let j = 0; j < 5; j++) {
+                const rball = ennemyR;
+                const rShift = randomAmplitude(5);
                 const enemy = new Circle({
-                    x, y, z: 1, color: randomColor(255, 0, 0), r: ennemyR,
-                    live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r - ennemyR / 2, shift + Math.PI + direction * game.time / 400) }
+                    x: platform.position.x, y: platform.position.y, z: 1, color: randomColor(255, 0, 0), rball,
+                    live: () => {
+                        enemy.position = Geometry.pointFromCenterRadiusAngle(platform.position.x, platform.position.y, platform.r, angle + j / 6 + direction * game.time / 400);
+                        enemy.r = rball + rball / 3 * Math.cos(rShift + enemy.time / 200)
+                    }
                 })
                 enemies.push(enemy)
+
             }
-
-            const coin = new Circle({
-                x: x, y: y - r - 50, color: "yellow", stroke: "black", r: 8,
-                live: () => {
-                    coin.r = 8 + randomAmplitude(1);
-                }
-            });
-            coins.add(coin);
-
-            new Cloud({ x, y: y - 300 });
-
         }
-        const winZone = new Circle({ x: x + 150 + randomAmplitude(100), y, color: "blue", r: 32 });
+
+
+
+
+
+
+        class Obstacle extends Circle {
+            constructor({ x, y, r }) {
+                const nbConcentricCircles = 6;
+                const platformShift = randomAmplitude(32);
+                const mobile = Math.random() > 0.5;
+
+                super({
+                    x, y, color: randomColor(0, 192, 0), r, live: () => {
+                        if (mobile)
+                            this.speed.y = Math.cos(platformShift + this.time / 400);
+                        for (let i = 0; i < nbConcentricCircles; i++) {
+                            this.circles[i].position.x = this.position.x;
+                            this.circles[i].position.y = this.position.y;
+
+                        }
+                    }
+                });
+
+                this.circles = [];
+
+                for (let i = 0; i < nbConcentricCircles; i++) {
+                    this.circles.push(new Circle({ x: x + randomAmplitude(10), y: y, color: randomColor(0, 192, 0), r: r - i * r / nbConcentricCircles }));
+                }
+            }
+        }
+
+
+
+        let player;
+        let winZone;
+
+        function createScene() {
+
+            new Circle({ x: 0, y: 0, z: -1, color: "lightblue", r: 1280 });
+
+            player = new MisterSaturn({ x: 0, y: -200, color: "yellow" });
+            misters.push(player)
+
+            let x = 0;
+            let y = 0;
+
+
+
+            for (let i = 0; i < 10; i++) {
+
+                const xx = x;
+                const yy = y;
+                const r = 64 + randomAmplitude(32);
+                const platform = new Obstacle({ x, y, r });
+
+
+                obstacles.push(platform);
+
+                const shift = randomAmplitude(2);
+
+                if (i > 0) {
+
+                    if (Math.random() > 0.5) {
+                        const pnj = new PNJ({ x, y: y - 100 });
+                        misters.push(pnj);
+                        obstacles.push(pnj);
+                    }
+                    else {
+                        createEnemyBlob(platform, shift);
+
+                        if (Math.random() > 0.5)
+                            createEnemyBlob(platform, shift + Math.PI);
+
+                    }
+
+                }
+                const coin = new Circle({
+                    x: x, y: y - r - 50, color: "yellow", stroke: "black", r: 8,
+                    live: () => {
+                        coin.r = 8 + randomAmplitude(1);
+                    }
+                });
+                coins.add(coin);
+
+                new Cloud({ x, y: y - 300 });
+
+                x += 150 + randomAmplitude(50);
+                y -= 32 + randomAmplitude(32);
+
+            }
+            winZone = new Vortex({ x, y });
+        }
+
+
 
         function reset() {
-            player.position = { x: 0, y: -200 };
-            player.pv = 3;
+            obstacles = [];
+            enemies = [];
+            misters = [];
+            coins = new Set();
+            game.reset();
+            createScene();
         }
 
 
+
+        reset();
 
         game.live = (ctx) => {
             game.cameraAttach(player);
             control2DCross(player, { speed: 3 });
-            player.platformCurrent = undefined;
-            for (const obstacle of obstacles) {
-                if (intersects(player, obstacle)) {
-                    moveOutside(player, obstacle);
-                    player.platformCurrent = obstacle;
+
+            for (const mister of misters) {
+                mister.platformCurrent = undefined;
+                for (const obstacle of obstacles) {
+                    if (mister != obstacle)
+                        if (intersects(mister, obstacle)) {
+                            mister.speed.x += obstacle.speed.x;
+                            mister.speed.y += obstacle.speed.y;
+                            moveOutside(mister, obstacle);
+                            mister.platformCurrent = obstacle;
+                        }
                 }
             }
+
 
             for (const coin of coins) {
                 if (intersects(player, coin)) {

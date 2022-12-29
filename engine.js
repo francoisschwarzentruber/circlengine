@@ -90,13 +90,12 @@ export class Circle extends PhysicalObject {
     constructor(option) {
         super(option.x, option.y, option.z);
         Object.assign(this, option);
-        if (option.live == undefined)
-            this.live = () => { };
     }
 
     _live() {
         super.handlePhysics();
-        this.live();
+        if (this.live)
+            this.live();
     }
 
     draw(ctx) {
@@ -157,6 +156,10 @@ export default class Game {
         Game.drawFixed(ctx);
     }
 
+
+    static reset() {
+        Game.objects = []
+    }
     static cameraAttach(o) {
         Game.cameraFollows = o;
     }
@@ -260,7 +263,6 @@ export function ensurePositionInside(o1, collection) {
     if (cI.length == 0)
         return; //too bad
 
-    console.log(cI.length)
     const o2 = cI[0];
     const angle = Math.atan2(o1.position.y - o2.position.y, o1.position.x - o2.position.x);
     const dr = o2.r - o1.r;
@@ -276,6 +278,14 @@ export class Geometry {
         return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
     }
 
+    static angleBetween(o1, o2) {
+        return Math.atan2(o2.position.y - o1.position.y, o2.position.x - o1.position.x)
+    }
+
+    static add(v, v2) {
+        return { x: v.x + v2.x, y: v.y + v2.y };
+    }
+
 }
 function distance(a, b) { return Math.sqrt((a.position.x - b.position.x) ** 2 + (a.position.y - b.position.y) ** 2); }
 
@@ -285,6 +295,8 @@ export function moveOutside(o1, o2) {
     const angle = Math.atan2(o1.position.y - o2.position.y, o1.position.x - o2.position.x);
     o1.position = { x: o1.position.x - dr * Math.cos(angle), y: o1.position.y - dr * Math.sin(angle) }
 }
+
+
 export function bounce(o1, o2) {
     const SPEED = 1;
     const d = distance(o1, o2);
@@ -311,4 +323,8 @@ export function control2DCross(object) {
 }
 
 export function randomAmplitude(a) { return (Math.random() - 0.5) * a; }
-export function randomColor(r, g, b) { return `rgb(${Math.max(r + randomAmplitude(64), 0)}, ${Math.max(g + randomAmplitude(64), 0)}, ${Math.max(b + randomAmplitude(64), 0)})` }
+export function randomColor(r, g, b) {
+    const AMPLI = 128;
+    const minmax = (v) => Math.min(255, Math.max(v, 0));
+    return `rgb(${minmax(r + randomAmplitude(AMPLI))}, ${minmax(g + randomAmplitude(AMPLI))}, ${minmax(b + randomAmplitude(AMPLI), 0)})`
+}

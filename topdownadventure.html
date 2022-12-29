@@ -9,13 +9,13 @@
             margin: 0;
             padding: 0;
         }
-    
+
         body,
         html {
             background-color: black;
             height: 100%;
         }
-    
+
         canvas {
             padding: 0;
             margin: auto;
@@ -64,16 +64,57 @@
 
         const speed = 2;
 
-        class Player extends Circle {
-            constructor({ x, y }) {
-                super({ x, y, r: 8, color: "orange", stroke: "black", live: () => { player.color = player.hurt ? "#FF880088" : "#FF8800"; }, pv: 3, coin: 0 });
+        class MisterSaturnTopDown extends Circle {
+            constructor({ x, y, color = "yellow", noiseColor = "orange" }) {
+                super({
+                    x, y, z: 0, color, r: 16,
+                    pv: 3, coin: 0,
+
+                });
+                this.direction = { x: 1, y: 0 };
+                this.noiseColor = noiseColor;
+
             }
-            left() { this.speed = { x: -speed, y: 0 }; }
-            right() { this.speed = { x: speed, y: 0 }; }
-            up() { this.speed = { x: 0, y: -speed }; }
-            down() { this.speed = { x: 0, y: speed }; }
-            action() {}
+
+            draw(ctx) {
+                function drawEye(x, y) {
+                    ctx.fillStyle = "white";
+                    ctx.disk(x, y, 6);
+                    ctx.fillStyle = "black";
+                    ctx.disk(x + Math.cos(game.time / 300), y + Math.sin(game.time / 300), 3);
+                }
+
+                const drawNoise = (x, y) => {
+                    ctx.fillStyle = this.noiseColor;
+                    ctx.disk(x, y, 5);
+                }
+
+                super.draw(ctx);
+                if (this.direction.y >= 0) {
+                    if (this.direction.x <= 0) {
+                        drawEye(this.position.x - 5, this.position.y - 5);
+                    }
+                    if (this.direction.x >= 0) {
+                        drawEye(this.position.x + 5, this.position.y - 5);
+                    }
+                    drawNoise(this.position.x + this.direction.x * 16, this.position.y);
+
+                }
+
+            }
+
+            go(d) {
+                this.direction = d;
+                this.speed = { x: speed * d.x, y: speed * d.y };
+            }
+            left() { this.go({ x: -1, y: 0 }); }
+            right() { this.go({ x: 1, y: 0 }); }
+            up() { this.go({ x: 0, y: -1 }); }
+            down() { this.go({ x: 0, y: 1 }); }
+            action() { }
         }
+
+
 
         new Circle({ x: 0, y: 0, z: -3, color: "cyan", r: 3000 });
 
@@ -98,16 +139,24 @@
                 new Cloud(Geometry.pointFromCenterRadiusAngle(x, y, randomAmplitude(3 * r), randomAmplitude(2 * Math.PI)))
 
             islands.push(island);
-            const enemy = new Circle({ x: x, y: y, color: "purple", stroke: "black", r: 8 });
-            const angleInitial = Math.random();
-            const angleRInitial = Math.random();
-            const direction = Math.random() < 0.5 ? -1 : 1;
-            enemy.live = () => {
-                const rC = r * (Math.cos(angleRInitial + game.time / 2000));
-                enemy.position.x = xx + rC * Math.cos(angleInitial + direction * game.time / 4000);
-                enemy.position.y = yy + rC * Math.sin(angleInitial + direction * game.time / 4000);
+
+            for (let j = 0; j < 10; j++) {
+                const enemy = new MisterSaturnTopDown({ x: x + randomAmplitude(300), y: y + randomAmplitude(300), color: "purple" });
+                enemy.live = () => {
+                    enemy.speed = enemy.direction;
+                    if (Math.random() > 0.9) {
+                        switch(Math.floor(Math.random()*4)) {
+                            case 0:enemy.left(); break;
+                            case 1:enemy.up(); break;
+                            case 2:enemy.right(); break;
+                            case 3:enemy.down(); break;
+                        }
+                    }
+                    enemy.go(enemy.direction);
+                }
+                enemies.push(enemy);
+
             }
-            enemies.push(enemy);
 
             const angleInitial2 = Math.random();
 
@@ -126,7 +175,7 @@
 
 
         const winZone = new Circle({ x, y, color: "blue", r: 32 });
-        const player = new Player({ x: 0, y: 0 });
+        const player = new MisterSaturnTopDown({ x: 0, y: 0, color: "yellow" });
 
         function reset() {
             player.position = { x: 0, y: 0 };
@@ -138,9 +187,18 @@
             control2DCross(player, { speed: 3 });
             ensurePositionInside(player, islands);
 
+            for(const enemy of enemies) {
+                ensurePositionInside(enemy, islands);
+            }
             for (const obstacle of obstacles) {
                 if (intersects(player, obstacle))
                     bounce(player, obstacle);
+            }
+
+            for (const obstacle of obstacles)
+            for(const enemy of enemies) {
+                if (intersects(enemy, obstacle))
+                    bounce(enemy, obstacle);
             }
 
             for (const coin of coins) {
@@ -156,7 +214,7 @@
                     if (!player.hurt) {
                         for (let i = 0; i < 5; i++)
                             new Particule({ x: player.position.x, y: player.position.y, color: "red" });
-                        player.pv--;
+                       // player.pv--;
                     }
                     setTimeout(() => player.hurt = false, 1000);
                     player.hurt = true;
