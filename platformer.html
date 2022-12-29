@@ -68,11 +68,29 @@
                 super({
                     x, y, z: 0, color: "yellow", r: 16,
                     pv: 3, coin: 0,
-                    live: () => { if (this.platformCurrent == undefined) this.acceleration.y = Math.min(3, this.acceleration.y + 0.2) }
-                })
+                    live: () => {
+                        if (this.platformCurrent == undefined)
+                            this.acceleration.y = Math.min(3, this.acceleration.y + 0.2);
+                        else
+                            this.acceleration.y = 0;
+                        this.r = 16 - this.acceleration.y / 4;
+                        this.eye.position = { x: this.position.x + this.direction * 5, y: this.position.y - 5 };
+
+                        this.eyeInside.position = {
+                            x: this.position.x + this.direction * 8 + Math.cos(game.time / 300),
+                            y: this.position.y - 5 + Math.sin(game.time / 300)
+                        };
+
+                        this.noise.position = { x: this.position.x + this.direction * 16, y: this.position.y };
+                    }
+                });
+                this.direction = 1;
+                this.eye = new Circle({ x, y, r: 6, z: 1, color: "white", stroke: "black" });
+                this.eyeInside = new Circle({ x, y, r: 3, z: 2, color: "black" });
+                this.noise = new Circle({ x, y, r: 5, z: 1, color: "yellow" });
             }
-            left() { this.speed = { x: -speed, y: 0 }; }
-            right() { this.speed = { x: speed, y: 0 }; }
+            left() { this.direction = -1; this.speed = { x: -speed, y: 0 }; }
+            right() { this.direction = 1; this.speed = { x: speed, y: 0 }; }
             up() { }
             down() { }
             action() { if (this.platformCurrent) this.acceleration = { x: 0, y: -5 }; }
@@ -100,14 +118,30 @@
             const yy = y;
             const r = 64 + randomAmplitude(32);
             const platform = new Circle({ x, y, color: randomColor(0, 192, 0), r });
+
+            const nbConcentricCircles = 6;
+            for (let i = 0; i < nbConcentricCircles; i++) {
+                new Circle({ x: x + randomAmplitude(10), y: y, color: randomColor(0, 192, 0), r: r - i * r / nbConcentricCircles })
+            }
             obstacles.push(platform);
 
             const shift = randomAmplitude(2);
             const direction = Math.random() > 0.5 ? 1 : -1;
+
+            const ennemyR = 16;
             const enemy = new Circle({
-                x, y, z: 1, color: randomColor(255, 0, 0), r: 16,
-                live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r, shift + direction * game.time / 400) }
+                x, y, z: 1, color: randomColor(255, 0, 0), r: ennemyR,
+                live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r - ennemyR / 2, shift + direction * game.time / 400) }
             })
+            enemies.push(enemy)
+
+            if (Math.random() > 0.5) {
+                const enemy = new Circle({
+                    x, y, z: 1, color: randomColor(255, 0, 0), r: ennemyR,
+                    live: () => { enemy.position = Geometry.pointFromCenterRadiusAngle(xx, yy, r - ennemyR / 2, shift + Math.PI + direction * game.time / 400) }
+                })
+                enemies.push(enemy)
+            }
 
             const coin = new Circle({
                 x: x, y: y - r - 50, color: "yellow", stroke: "black", r: 8,
@@ -119,10 +153,9 @@
 
             new Cloud({ x, y: y - 300 });
 
-            enemies.push(enemy)
-
         }
         const winZone = new Circle({ x: x + 150 + randomAmplitude(100), y, color: "blue", r: 32 });
+
         function reset() {
             player.position = { x: 0, y: -200 };
             player.pv = 3;

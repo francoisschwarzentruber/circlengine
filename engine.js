@@ -126,6 +126,8 @@ export class Particule extends Circle {
                     this.speed.y = sy2;
 
             }
+            else
+                this.delete();
         }
         super(option);
 
@@ -273,10 +275,9 @@ export class Geometry {
     static pointFromCenterRadiusAngle(cx, cy, r, a) {
         return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
     }
+
 }
-function distance(a, b) {
-    return Math.sqrt((a.position.x - b.position.x) ** 2 + (a.position.y - b.position.y) ** 2);
-}
+function distance(a, b) { return Math.sqrt((a.position.x - b.position.x) ** 2 + (a.position.y - b.position.y) ** 2); }
 
 export function moveOutside(o1, o2) {
     const d = distance(o1, o2);
@@ -310,4 +311,4 @@ export function control2DCross(object) {
 }
 
 export function randomAmplitude(a) { return (Math.random() - 0.5) * a; }
-export function randomColor(r, g, b) { return `rgb(${Math.max(r + randomAmplitude(64))}, ${Math.max(g + randomAmplitude(64))}, ${Math.max(b + randomAmplitude(64))})` }
+export function randomColor(r, g, b) { return `rgb(${Math.max(r + randomAmplitude(64), 0)}, ${Math.max(g + randomAmplitude(64), 0)}, ${Math.max(b + randomAmplitude(64), 0)})` }
