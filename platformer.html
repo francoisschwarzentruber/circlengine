@@ -35,7 +35,7 @@
     </canvas>
     <script type="module">
         import game from "./engine.js";
-        import { Circle, Particule, Sound, control2DCross, intersects, isInside, ensurePositionInside, moveOutside, randomAmplitude, randomColor, Geometry } from "./engine.js";
+        import { Circle, Particule, Sound, Control, intersects, isInside, ensurePositionInside, moveOutside, randomAmplitude, randomColor, Geometry } from "./engine.js";
 
 
         class Cloud {
@@ -286,7 +286,7 @@
 
         game.live = (ctx) => {
             game.cameraAttach(player);
-            control2DCross(player, { speed: 3 });
+            Control.control2DCross(player, { speed: 3 });
 
             for (const mister of misters) {
                 mister.platformCurrent = undefined;

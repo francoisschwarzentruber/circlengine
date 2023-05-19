@@ -55,6 +55,7 @@
                     this.delete();
                 }
                 const angle = Math.Pi + this.time * 2 * Math.Pi / 10;
+                this.r = 8 + 4 * Math.sin(this.time / 20);
                 super.draw(ctx);
 
             }
@@ -136,73 +137,75 @@
             down() { this.go({ x: 0, y: 1 }); }
             action() {
                 const SPEED = 5;
-                if(weapon == undefined)
-                weapon = new Weapon({ x: this.position.x + 24 * this.direction.x, y: this.position.y + 24 * this.direction.y , acceleration: {x:SPEED*this.direction.x, y:SPEED*this.direction.y}})
+                if (weapon == undefined)
+                    weapon = new Weapon({ x: this.position.x + 24 * this.direction.x, y: this.position.y + 24 * this.direction.y, acceleration: { x: SPEED * this.direction.x, y: SPEED * this.direction.y } })
             }
         }
 
 
 
-        new Circle({ x: 0, y: 0, z: -3, color: "cyan", r: 3000 });
+
+        class Island extends Circle {
+            constructor(param) {
+                super(param);
+                const r2 = 32;
+                const N = 10;
+                for (let j = 0; j < N; j++) {
+                    const r2 = param.r / 4;
+                    const angle = 2 * Math.PI * j / N;
+                    const c = new Circle({
+                        x: param.x + param.r * Math.cos(angle), y: param.y + param.r * Math.sin(angle), z: -3, color: randomColor(255, 192, 0), r: 2 * r2
+                    });
+                }
+            }
+        }
+        //        new Circle({ x: 0, y: 0, z: -3, color: "black", r: 3000 });
 
         const obstacles = new Set();
         const enemies = new Set();
         const islands = new Set();
         const coins = new Set();
 
-        let x = 0;
-        let y = 0;
-        for (let i = 0; i < 10; i++) {
-            const r = 250 + Math.random() * 130;
-            x += r * 0.8;
-            const xx = x;
-            const yy = y;
-            const island = new Circle({ x: x, y: y, z: -2, color: "lightgreen", r: r });
 
-            for (let j = 0; j <= 30; j++)
-                new Tree(Geometry.pointFromCenterRadiusAngle(x, y, randomAmplitude(2 * r), randomAmplitude(2 * Math.PI)))
-
-            for (let j = 0; j <= 20; j++)
-                new Cloud(Geometry.pointFromCenterRadiusAngle(x, y, randomAmplitude(3 * r), randomAmplitude(2 * Math.PI)))
-
-            islands.add(island);
-
-            for (let j = 0; j < 10; j++) {
-                const enemy = new MisterSaturnTopDown({ x: x + randomAmplitude(300), y: y + randomAmplitude(300), color: "purple" });
-                enemy.live = () => {
-                    enemy.speed = enemy.direction;
-                    if (Math.random() > 0.9) {
-                        switch (Math.floor(Math.random() * 4)) {
-                            case 0: enemy.left(); break;
-                            case 1: enemy.up(); break;
-                            case 2: enemy.right(); break;
-                            case 3: enemy.down(); break;
-                        }
-                    }
-                    enemy.go(enemy.direction);
-                }
-                enemies.add(enemy);
-
-            }
-
-            const angleInitial2 = Math.random();
-
-            const coin = new Circle({
-                x: x, y: y, color: "yellow", stroke: "black", r: 8, live: () => {
-                    const rC = r;
-                    coin.position.y = yy + rC * Math.cos(angleInitial2 + game.time / 3000);
-                }
-            });
-            coins.add(coin);
-
-
-            x += r * 0.5;
-            y += -10 + Math.random() * r;
+        while ((islands.size < 5 ||  !Geometry.isConnectedRegion(islands))) {
+            const r = 96;
+            const SIZEZONE = 256;
+          //  const pos = Geometry.generateFar(() => ({x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE}), islands)
+            const pos = {x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE}
+            islands.add(new Island({ ...pos, z: -2, color: "lightgreen", r: r }));
         }
 
 
-        const winZone = new Circle({ x, y, color: "blue", r: 32 });
-        const player = new MisterSaturnTopDown({ x: 0, y: 0, color: "yellow" });
+        for (let j = 0; j < 3; j++) {
+            const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(islands), color: "purple" });
+            enemy.live = () => {
+                enemy.speed = enemy.direction;
+                if (Math.random() > 0.9) {
+                    switch (Math.floor(Math.random() * 4)) {
+                        case 0: enemy.left(); break;
+                        case 1: enemy.up(); break;
+                        case 2: enemy.right(); break;
+                        case 3: enemy.down(); break;
+                    }
+                }
+                enemy.go(enemy.direction);
+            }
+            enemies.add(enemy);
+
+        }
+
+
+        for (let j = 0; j <= islands.size; j++)
+            new Tree(Geometry.randomPointIn(islands));
+
+
+        const player = new MisterSaturnTopDown({ ...Geometry.randomPointIn(islands), color: "yellow" });
+
+
+        const winZone = new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
+        new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
+        new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
+
 
         function reset() {
             player.position = { x: 0, y: 0 };
@@ -270,10 +273,7 @@
                 ctx.disk(16 + 24 * i, 16, 10);
             }
 
-            ctx.fillStyle = "yellow";
-            ctx.disk(200, 16, 10);
-            ctx.fillStyle = "black";
-            ctx.fillText("x " + player.coin, 214, 20);
+
         }
     </script>
 </body>
