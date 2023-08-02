@@ -111,7 +111,9 @@ export class Geometry {
         let pt = undefined;
         for (let i = 0; i < 20; i++) {
             const newpt = generatorFunction();
-            const newd = (obj instanceof Circle) ? Geometry.distance(newpt, obj) : Math.min(...Array.from(obj).map((o) => Geometry.distance(newpt, o)));
+            const newd = (obj.x != undefined) ?
+                Geometry.distance(newpt, obj)
+                : Math.min(...Array.from(obj).map((o) => Geometry.distance(newpt, o)));
             if (newd > d) {
                 d = newd;
                 pt = newpt;

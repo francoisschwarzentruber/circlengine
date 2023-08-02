@@ -52,6 +52,8 @@
 
         import { randomColor, randomAmplitude } from "./engine/random.js";
 
+        import { Music } from "./engine/music.js";
+
 
         const settings = [
             {
@@ -121,7 +123,7 @@
                         x: this.position.x + 24 * this.direction.x,
                         y: this.position.y + 24 * this.direction.y,
                         acceleration: { x: SPEED * this.direction.x, y: SPEED * this.direction.y }
-                    })
+                    });
                     Game.scene.add(weapon);
                 }
             }
@@ -138,7 +140,15 @@
         }
 
 
-
+        class EnergyBall extends Circle {
+            constructor({ x, y }) {
+                super({ x, y, color: "white", r: 16, z: 0 });
+                this.live = () => {
+                    this.color = `rgb(255, ${this.time % 255}, 255)`;
+                }
+                this.on = () => { };
+            }
+        }
 
         function createStars(scene) {
             for (let i = 0; i < 1000; i++) {
@@ -180,8 +190,10 @@
                 this.obstacles = this.createGroup();
                 this.enemies = this.createGroup();
                 this.plateforms = this.createGroup();
-                this.coins = this.createGroup();
+                this.items = this.createGroup();
                 this.doors = this.createGroup();
+
+
 
                 this.player = player;
 
@@ -214,10 +226,9 @@
                             bounce(enemy, obstacle);
                     }
 
-                for (const coin of this.coins) {
-                    if (intersects(player, coin)) {
-                        coin.delete();
-                        this.player.coin++;
+                for (const item of this.items) {
+                    if (intersects(player, item)) {
+                        item.on();
                     }
                 }
                 if (weapon)
@@ -251,6 +262,10 @@
 
             }
 
+
+
+
+
             drawFixed(ctx) {
                 for (let i = 0; i < this.player.pv; i++) {
                     ctx.fillStyle = "red";
@@ -264,7 +279,7 @@
 
 
 
-        class IslandsScene extends RoguelikeScene {
+        class CaveScene extends RoguelikeScene {
             createIsland(param) {
                 const island = new Circle(param);
                 this.add(island);
@@ -285,6 +300,9 @@
 
             constructor(player) {
                 super(player);
+
+                if (!this.player.energyBall)
+                    Music.play("bachartdelafugue2.ogg");
 
                 this.add(new Circle({ x: 0, y: 0, z: -3, color: setting.background, r: 3000 }));
 
@@ -325,24 +343,7 @@
 
 
 
-                for (let j = 0; j < 3; j++) {
-                    const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.plateforms), color: "grey" });
-                    enemy.live = () => {
-                        enemy.speed = enemy.direction;
-                        if (Math.random() > 0.9) {
-                            switch (Math.floor(Math.random() * 4)) {
-                                case 0: enemy.left(); break;
-                                case 1: enemy.up(); break;
-                                case 2: enemy.right(); break;
-                                case 3: enemy.down(); break;
-                            }
-                        }
-                        enemy.go(enemy.direction);
-                    }
-                    this.add(enemy);
-                    this.enemies.add(enemy);
 
-                }
 
 
                 for (let i = 0; i < 1; i++) {
@@ -361,6 +362,48 @@
 
                 player.position = Geometry.randomPointIn(this.plateforms);
 
+                if (!this.player.energyBall) {
+                    for (let j = 0; j < 3; j++) {
+                        const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.plateforms), color: "grey" });
+                        enemy.live = () => {
+                            enemy.speed = enemy.direction;
+                            if (Math.random() > 0.9) {
+                                switch (Math.floor(Math.random() * 4)) {
+                                    case 0: enemy.left(); break;
+                                    case 1: enemy.up(); break;
+                                    case 2: enemy.right(); break;
+                                    case 3: enemy.down(); break;
+                                }
+                            }
+                            enemy.go(enemy.direction);
+                        }
+                        this.add(enemy);
+                        this.enemies.add(enemy);
+
+                    }
+
+
+
+                }
+            }
+
+
+
+            live() {
+                super.live();
+                if (!this.player.energyBall && this.enemies.size == 0 && this.energyBall == undefined) {
+                    const energyBall = new EnergyBall(Geometry.generateFarest(
+                        () => Geometry.randomPointIn(this.plateforms), this.player));
+                    this.energyBall = energyBall;
+                    this.add(energyBall);
+                    energyBall.on = () => {
+                        energyBall.delete();
+                        Music.play("faureromancessansparole3.ogg");
+                        this.player.energyBall = true;
+                    };
+                    this.items.add(energyBall);
+
+                }
             }
         }
 
@@ -372,6 +415,14 @@
         class BeginningScene extends RoguelikeScene {
             constructor(player) {
                 super(player);
+
+
+                if (!player.energyBall) {
+                    Music.play("janacekinthemistpart1.ogg")
+                }
+                else
+                    Music.play("faureromancessansparole3.ogg")
+
                 player.position.x = 0;
                 player.position.y = 0;
 
@@ -401,11 +452,31 @@
 
                 const door = new Door({ x: -25, y: 35 });
                 this.add(door);
-                door.on = () => { Game.setScene(new IslandsScene(player, { x: 0, y: 0 })) };
+                door.on = () => { Game.setScene(new CaveScene(player, { x: 0, y: 0 })) };
                 this.doors.add(door);
 
-                this.add(new MisterSaturn({x:100, y:100, color: "red"}));
+                this.pnj = new MisterSaturn({ x: 100, y: 100, color: "red" });
+                this.add(this.pnj);
 
+            }
+
+
+            draw(ctx) {
+                super.draw(ctx);
+                if (intersects(this.player, this.pnj)) {
+                    ctx.fillStyle = "black";
+
+                    if (!this.player.energyBall) {
+                        ctx.fillText("Hello! You see the planet behind. It is full of metal and pollution.", 30, 0, 200);
+                        ctx.fillText("And now they want to extract the minerals from our moon.", 30, 20, 200);
+                        ctx.fillText("Our moon is under attack. The invaders are already in the cave.", 30, 40, 200);
+                        ctx.fillText("I am old now. Please go find and save the energy ball.", 30, 60, 200);
+                    }
+                    else {
+                        ctx.fillText("Bravo! Our moon is safe now.", 30, 0, 200);
+
+                    }
+                }
             }
         }
 

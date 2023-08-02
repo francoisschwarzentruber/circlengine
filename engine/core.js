@@ -10,7 +10,7 @@ export class Scene {
     cameraFollows = undefined;
     drawFixed(ctx) { }
 
-    _draw = () => {
+    draw(ctx) {
         ctx.resetTransform();
         ctx.clearRect(0, 0, 640, 480);
 
@@ -27,8 +27,6 @@ export class Scene {
             if (o.isDeleted)
                 this.delete(o);
 
-        ctx.resetTransform();
-        this.drawFixed(ctx);
     }
 
 
@@ -113,9 +111,10 @@ CanvasRenderingContext2D.prototype.arrow = function (x, y, angle, S = 16, A = 0.
 
 
 
-class InitScene {
+class InitScene extends Scene {
     live() { }
-    _draw() { }
+    draw() { }
+    
 }
 
 
@@ -132,7 +131,10 @@ Game.setScene(new InitScene());
 function animate() {
     requestAnimationFrame(animate);
     Game.scene.live();
-    Game.scene._draw(ctx);
+    const ctx = canvas.getContext("2d")
+    Game.scene.draw(ctx);
+    ctx.resetTransform();
+    Game.scene.drawFixed(ctx);
 }
 
 
