@@ -151,10 +151,10 @@
 
 
 
-        let obstacles = [];
-        let enemies = [];
-        let coins = new Set();
-        let misters = [];
+        let obstacles = game.createGroup();
+        let enemies = game.createGroup();
+        let coins = game.createGroup();
+        let misters = game.createGroup();
 
 
         function createEnemyBlob(platform, angle) {
@@ -171,7 +171,7 @@
                         enemy.r = rball + rball / 3 * Math.cos(rShift + enemy.time / 200)
                     }
                 })
-                enemies.push(enemy)
+                enemies.add(enemy)
 
             }
         }
@@ -217,7 +217,7 @@
             new Circle({ x: 0, y: 0, z: -1, color: "lightblue", r: 1280 });
 
             player = new MisterSaturn({ x: 0, y: -200, color: "yellow" });
-            misters.push(player)
+            misters.add(player)
 
             let x = 0;
             let y = 0;
@@ -232,7 +232,7 @@
                 const platform = new Obstacle({ x, y, r });
 
 
-                obstacles.push(platform);
+                obstacles.add(platform);
 
                 const shift = randomAmplitude(2);
 
@@ -240,8 +240,8 @@
 
                     if (Math.random() > 0.5) {
                         const pnj = new PNJ({ x, y: y - 100 });
-                        misters.push(pnj);
-                        obstacles.push(pnj);
+                        misters.add(pnj);
+                        obstacles.add(pnj);
                     }
                     else {
                         createEnemyBlob(platform, shift);
@@ -272,10 +272,6 @@
 
 
         function reset() {
-            obstacles = [];
-            enemies = [];
-            misters = [];
-            coins = new Set();
             game.reset();
             createScene();
         }
@@ -304,8 +300,7 @@
 
             for (const coin of coins) {
                 if (intersects(player, coin)) {
-                    coin.delete();
-                    coins.delete(coin);
+                    game.delete(coin);
                     player.coin++;
                 }
             }

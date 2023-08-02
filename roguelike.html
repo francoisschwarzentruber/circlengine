@@ -35,8 +35,43 @@
     <canvas id="canvas" width="640" height="480">
     </canvas>
     <script type="module">
-        import game from "./engine.js";
-        import { Circle, Particule, Sound, Control, intersects, isInside, ensurePositionInside, bounce, randomAmplitude, randomColor, Geometry } from "./engine.js";
+        import Input from "./engine/input.js";
+        import { Game, Scene } from "./engine/core.js";
+        import {
+            intersects,
+            isInside, ensurePositionInside, bounce, Geometry
+        } from "./engine/physics.js";
+
+        import {
+            Sound
+        } from "./engine/sound.js";
+
+        import {
+            Circle, Particule, MisterSaturn
+        } from "./engine/objects.js";
+
+        import { randomColor, randomAmplitude } from "./engine/random.js";
+
+
+        const settings = [
+            {
+                background: "black",
+                floor: "lightgreen",
+                wall: () => randomColor(255, 192, 0)
+            },
+            {
+                background: "black",
+                floor: "lightgray",
+                wall: () => randomColor(128, 128, 128, 32)
+            },
+            {
+                background: "rgb(0, 128, 192)",
+                floor: "rgb(255, 192, 0)",
+                wall: () => "white"
+            }
+        ]
+
+        const setting = settings[2];
 
         let weapon = undefined;
 
@@ -45,34 +80,22 @@
                 o.color = "white";
                 o.r = 8;
                 o.z = 10;
-
                 super(o);
             }
 
             draw(ctx) {
                 if (this.time > 100) {
-                    weapon = undefined;
-                    this.delete();
+                    weapon.delete();
                 }
-                const angle = Math.Pi + this.time * 2 * Math.Pi / 10;
                 this.r = 8 + 4 * Math.sin(this.time / 20);
                 super.draw(ctx);
-
             }
         }
 
 
-        class Tree {
-            constructor({ x, y }) {
-                const r = 16 + randomAmplitude(8);
-                for (let i = 0; i < 4; i++)
-                    new Circle({ x: x + randomAmplitude(16), y: y + 16 + randomAmplitude(16), z: -1, color: randomColor(128, 255, 0), r: 12 });
 
-                new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 });
-                new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r })
-                obstacles.add(new Circle({ x, y: y + 8, z: -0.5, color: '#FFFFFF00', r: 12 }));
-            }
-        }
+
+
 
 
         class Cloud {
@@ -86,195 +109,222 @@
         }
 
 
-        const speed = 2;
-
-        class MisterSaturnTopDown extends Circle {
-            constructor({ x, y, color = "yellow", noiseColor = "orange" }) {
-                super({
-                    x, y, z: 0, color, r: 16,
-                    pv: 3, coin: 0,
-
-                });
-                this.direction = { x: 1, y: 0 };
-                this.noiseColor = noiseColor;
-
-            }
-
-            draw(ctx) {
-                function drawEye(x, y) {
-                    ctx.fillStyle = "white";
-                    ctx.disk(x, y, 6);
-                    ctx.fillStyle = "black";
-                    ctx.disk(x + Math.cos(game.time / 300), y + Math.sin(game.time / 300), 3);
-                }
-
-                const drawNoise = (x, y) => {
-                    ctx.fillStyle = this.noiseColor;
-                    ctx.disk(x, y, 5);
-                }
-
-                super.draw(ctx);
-                if (this.direction.y >= 0) {
-                    if (this.direction.x <= 0) {
-                        drawEye(this.position.x - 5, this.position.y - 5);
-                    }
-                    if (this.direction.x >= 0) {
-                        drawEye(this.position.x + 5, this.position.y - 5);
-                    }
-                    drawNoise(this.position.x + this.direction.x * 16, this.position.y);
-
-                }
-
-            }
-
-            go(d) {
-                this.direction = d;
-                this.speed = { x: speed * d.x, y: speed * d.y };
-            }
-            left() { this.go({ x: -1, y: 0 }); }
-            right() { this.go({ x: 1, y: 0 }); }
-            up() { this.go({ x: 0, y: -1 }); }
-            down() { this.go({ x: 0, y: 1 }); }
+        class MisterSaturnTopDown extends MisterSaturn {
             action() {
                 const SPEED = 5;
-                if (weapon == undefined)
-                    weapon = new Weapon({ x: this.position.x + 24 * this.direction.x, y: this.position.y + 24 * this.direction.y, acceleration: { x: SPEED * this.direction.x, y: SPEED * this.direction.y } })
+                if (weapon == undefined || weapon.isDeleted) {
+                    weapon = new Weapon({
+                        x: this.position.x + 24 * this.direction.x,
+                        y: this.position.y + 24 * this.direction.y,
+                        acceleration: { x: SPEED * this.direction.x, y: SPEED * this.direction.y }
+                    })
+                    Game.scene.add(weapon);
+                }
+            }
+
+        }
+
+
+
+        class Door extends Circle {
+            constructor({ x, y }) {
+                super({ x, x, color: "red", r: 112, z: -3 });
             }
         }
 
 
 
 
-        class Island extends Circle {
-            constructor(param) {
-                super(param);
+
+
+
+        class RoguelikeScene extends Scene {
+            createIsland(param) {
+                const island = new Circle(param);
+                this.add(island);
+                this.islands.add(island);
                 const r2 = 32;
                 const N = 10;
                 for (let j = 0; j < N; j++) {
                     const r2 = param.r / 4;
                     const angle = 2 * Math.PI * j / N;
                     const c = new Circle({
-                        x: param.x + param.r * Math.cos(angle), y: param.y + param.r * Math.sin(angle), z: -3, color: randomColor(255, 192, 0), r: 2 * r2
+                        x: param.x + param.r * Math.cos(angle), y: param.y + param.r * Math.sin(angle),
+                        z: -3, color: setting.wall(), r: 2 * r2
                     });
+                    this.add(c);
                 }
             }
-        }
-        //        new Circle({ x: 0, y: 0, z: -3, color: "black", r: 3000 });
 
-        const obstacles = new Set();
-        const enemies = new Set();
-        const islands = new Set();
-        const coins = new Set();
+            createTree({ x, y }) {
+                const c = new Circle({
+                    x, y: y + 8, z: -0.5, color: '#00FF00', r: 12,
+                });
+                this.add(c);
+                this.obstacles.add(c);
+                const r = 16 + randomAmplitude(8);
+                for (let i = 0; i < 4; i++)
+                    this.add(new Circle({
+                        x: x + randomAmplitude(16),
+                        y: y + 16 + randomAmplitude(16), z: -1, color: setting.wall(), r: 12
+                    }));
+
+                this.add(new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 }));
+                this.add(new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r }))
+            }
+
+            constructor() {
+                super();
+
+                this.add(new Circle({ x: 0, y: 0, z: -3, color: setting.background, r: 3000 }));
+
+                this.obstacles = this.createGroup();
+                this.enemies = this.createGroup();
+                this.islands = this.createGroup();
+                this.coins = this.createGroup();
+                this.doors = this.createGroup();
+
+                while ((this.islands.size < 10)) {
+                    const r = 96;
+                    const SIZEZONE = 256;
+
+                    let pos;
+
+                    if (this.islands.size == 0)
+                        pos = { x: 2 * SIZEZONE, y: 2 * SIZEZONE };
+                    else {
+                        const A = Array.from(this.islands);
+                        const rPt = { x: -SIZEZONE + Math.random() * SIZEZONE * 4, y: Math.random() * 4 * SIZEZONE - SIZEZONE };
+
+                        function getClosestCircle(islands, rPt) {
+                            let d = 10000000;
+                            let result = undefined;
+                            for (const i of islands) {
+                                const newD = Geometry.distance(rPt, i);
+                                if (newD < d) {
+                                    d = newD;
+                                    result = i;
+                                }
+                            }
+                            return result;
+                        }
+                        const c = getClosestCircle(this.islands, rPt);
+
+                        const angle = Geometry.angleBetween(c, rPt);
+                        pos = Geometry.add(c, Geometry.pointFromRadiusAngle(r / 2 + Math.random() * 3 * r / 4, angle));
+                    }
+                    //  const pos = { x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE }
+                    this.createIsland({ ...pos, z: -2, color: setting.floor, r: r });
+                }
 
 
-        while ((islands.size < 5 ||  !Geometry.isConnectedRegion(islands))) {
-            const r = 96;
-            const SIZEZONE = 256;
-          //  const pos = Geometry.generateFar(() => ({x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE}), islands)
-            const pos = {x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE}
-            islands.add(new Island({ ...pos, z: -2, color: "lightgreen", r: r }));
-        }
 
 
-        for (let j = 0; j < 3; j++) {
-            const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(islands), color: "purple" });
-            enemy.live = () => {
-                enemy.speed = enemy.direction;
-                if (Math.random() > 0.9) {
-                    switch (Math.floor(Math.random() * 4)) {
-                        case 0: enemy.left(); break;
-                        case 1: enemy.up(); break;
-                        case 2: enemy.right(); break;
-                        case 3: enemy.down(); break;
+                for (let j = 0; j < 3; j++) {
+                    const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.islands), color: "purple" });
+                    enemy.live = () => {
+                        enemy.speed = enemy.direction;
+                        if (Math.random() > 0.9) {
+                            switch (Math.floor(Math.random() * 4)) {
+                                case 0: enemy.left(); break;
+                                case 1: enemy.up(); break;
+                                case 2: enemy.right(); break;
+                                case 3: enemy.down(); break;
+                            }
+                        }
+                        enemy.go(enemy.direction);
+                    }
+                    this.add(enemy);
+                    this.enemies.add(enemy);
+
+                }
+
+                for (let i = 0; i < 3; i++) {
+                    const posDoor = Geometry.randomPointIn(this.islands);
+                    const door = new Door(posDoor);
+
+                    this.add(door);
+                    this.doors.add(door);
+                }
+
+
+
+
+                for (let j = 0; j <= this.islands.size / 2; j++)
+                    this.createTree(Geometry.randomPointIn(this.islands));
+
+                this.player = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.islands), color: "yellow" });
+                this.add(this.player);
+
+            }
+
+
+            live() {
+                this.cameraAttach(this.player);
+                Input.control2DCross(this.player, { speed: 3 });
+                ensurePositionInside(this.player, this.islands);
+
+                for (const enemy of this.enemies) {
+                    ensurePositionInside(enemy, this.islands);
+                }
+                for (const obstacle of this.obstacles) {
+                    if (intersects(this.player, obstacle))
+                        bounce(this.player, obstacle);
+                }
+
+                for (const obstacle of this.obstacles)
+                    for (const enemy of this.enemies) {
+                        if (intersects(enemy, obstacle))
+                            bounce(enemy, obstacle);
+                    }
+
+                for (const coin of this.coins) {
+                    if (intersects(player, coin)) {
+                        coin.delete();
+                        this.player.coin++;
                     }
                 }
-                enemy.go(enemy.direction);
-            }
-            enemies.add(enemy);
+                if (weapon)
+                    for (const enemy of this.enemies)
+                        if (intersects(weapon, enemy)) {
+                            for (let i = 0; i < 15; i++)
+                                this.add(new Particule({ x: enemy.position.x, y: enemy.position.y, color: "red" }));
+                            enemy.delete();
+                        }
 
-        }
-
-
-        for (let j = 0; j <= islands.size; j++)
-            new Tree(Geometry.randomPointIn(islands));
-
-
-        const player = new MisterSaturnTopDown({ ...Geometry.randomPointIn(islands), color: "yellow" });
-
-
-        const winZone = new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
-        new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
-        new Circle({ ...Geometry.generateFarest(() => Geometry.randomPointBorder(islands), player), color: "black", r: 16});
-
-
-        function reset() {
-            player.position = { x: 0, y: 0 };
-            player.pv = 3;
-        }
-
-        game.live = (ctx) => {
-            game.cameraAttach(player);
-            Control.control2DCross(player, { speed: 3 });
-            ensurePositionInside(player, islands);
-
-            for (const enemy of enemies) {
-                ensurePositionInside(enemy, islands);
-            }
-            for (const obstacle of obstacles) {
-                if (intersects(player, obstacle))
-                    bounce(player, obstacle);
-            }
-
-            for (const obstacle of obstacles)
-                for (const enemy of enemies) {
-                    if (intersects(enemy, obstacle))
-                        bounce(enemy, obstacle);
-                }
-
-            for (const coin of coins) {
-                if (intersects(player, coin)) {
-                    coin.delete();
-                    coins.delete(coin);
-                    player.coin++;
-                }
-            }
-            if (weapon)
-                for (const enemy of enemies)
-                    if (intersects(weapon, enemy)) {
-                        enemy.delete();
-                        enemies.delete(enemy);
+                for (const enemy of this.enemies)
+                    if (intersects(this.player, enemy)) {
+                        bounce(this.player, enemy);
+                        if (!this.player.hurt) {
+                            for (let i = 0; i < 5; i++)
+                                new Particule({ x: this.player.position.x, y: this.player.position.y, color: "red" });
+                            // this.player.pv--;
+                        }
+                        setTimeout(() => this.player.hurt = false, 1000);
+                        this.player.hurt = true;
                     }
 
-            for (const enemy of enemies)
-                if (intersects(player, enemy)) {
-                    bounce(player, enemy);
-                    if (!player.hurt) {
-                        for (let i = 0; i < 5; i++)
-                            new Particule({ x: player.position.x, y: player.position.y, color: "red" });
-                        // player.pv--;
-                    }
-                    setTimeout(() => player.hurt = false, 1000);
-                    player.hurt = true;
+
+                /* if (intersects(player, winZone)) {
+                     reset();
+                 }*/
+                if (this.player.pv == 0) {
+                    this.player.coins = 0;
+                    reset();
                 }
 
-            if (intersects(player, winZone)) {
-                reset();
             }
-            if (player.pv == 0) {
-                player.coins = 0;
-                reset();
+
+            drawFixed(ctx) {
+                for (let i = 0; i < this.player.pv; i++) {
+                    ctx.fillStyle = "red";
+                    ctx.disk(16 + 24 * i, 16, 10);
+                }
             }
         }
 
+        Game.setScene(new RoguelikeScene());
 
-        game.drawFixed = (ctx) => {
-            for (let i = 0; i < player.pv; i++) {
-                ctx.fillStyle = "red";
-                ctx.disk(16 + 24 * i, 16, 10);
-            }
-
-
-        }
     </script>
 </body>
 

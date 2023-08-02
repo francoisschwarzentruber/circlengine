@@ -52,7 +52,7 @@
             draw(ctx) {
                 if (this.time > 100) {
                     weapon = undefined;
-                    this.delete();
+                    game.delete(this);
                 }
                 const angle = Math.Pi + this.time * 2 * Math.Pi / 10;
                 super.draw(ctx);
@@ -145,10 +145,10 @@
 
         new Circle({ x: 0, y: 0, z: -3, color: "cyan", r: 3000 });
 
-        const obstacles = new Set();
-        const enemies = new Set();
-        const islands = new Set();
-        const coins = new Set();
+        const obstacles = game.createGroup();
+        const enemies = game.createGroup();
+        const islands = game.createGroup();
+        const coins = game.createGroup();
 
         let x = 0;
         let y = 0;
@@ -230,16 +230,14 @@
 
             for (const coin of coins) {
                 if (intersects(player, coin)) {
-                    coin.delete();
-                    coins.delete(coin);
+                    game.delete(coin);
                     player.coin++;
                 }
             }
             if (weapon)
                 for (const enemy of enemies)
                     if (intersects(weapon, enemy)) {
-                        enemy.delete();
-                        enemies.delete(enemy);
+                        game.delete(enemy);
                     }
 
             for (const enemy of enemies)
