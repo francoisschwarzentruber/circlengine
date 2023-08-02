@@ -71,7 +71,7 @@
             }
         ]
 
-        const setting = settings[2];
+        const setting = settings[1];
 
         let weapon = undefined;
 
@@ -109,6 +109,10 @@
         }
 
 
+
+
+
+
         class MisterSaturnTopDown extends MisterSaturn {
             action() {
                 const SPEED = 5;
@@ -128,11 +132,21 @@
 
         class Door extends Circle {
             constructor({ x, y }) {
-                super({ x, x, color: "red", r: 112, z: -3 });
+                super({ x, y, color: "black", r: 16, z: 0 });
+                this.on = () => { console.log("on event undefined") }
             }
         }
 
 
+
+
+        function createStars(scene) {
+            for (let i = 0; i < 1000; i++) {
+                const x = Math.random() * 1000 - 500;
+                const y = Math.random() * 1000 - 500;
+                scene.add(new Circle({ x, y, color: "white", r: 2, z: -2 }))
+            }
+        }
 
 
         const player = new MisterSaturnTopDown({ color: "yellow" });
@@ -157,10 +171,12 @@
                 this.add(new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r }))
             }
 
-            constructor(player) {
+            constructor(player, pos) {
                 super();
 
-                
+                if (pos)
+                    player.position = pos;
+
                 this.obstacles = this.createGroup();
                 this.enemies = this.createGroup();
                 this.plateforms = this.createGroup();
@@ -185,6 +201,11 @@
                 for (const obstacle of this.obstacles) {
                     if (intersects(this.player, obstacle))
                         bounce(this.player, obstacle);
+                }
+
+                for (const door of this.doors) {
+                    if (intersects(this.player, door))
+                        door.on();
                 }
 
                 for (const obstacle of this.obstacles)
@@ -324,10 +345,12 @@
                 }
 
 
-                for (let i = 0; i < 3; i++) {
-                    const posDoor = Geometry.randomPointIn(this.plateforms);
+                for (let i = 0; i < 1; i++) {
+                    const posDoor = Geometry.generateSuchthat(
+                        () => Geometry.randomPointBorder(this.plateforms),
+                        (a) => Array.from(this.plateforms).filter((p) => intersects(p, a)).length <= 1);
                     const door = new Door(posDoor);
-
+                    door.on = () => Game.setScene(new BeginningScene(player));
                     this.add(door);
                     this.doors.add(door);
                 }
@@ -335,6 +358,8 @@
 
                 for (let j = 0; j <= this.plateforms.size / 2; j++)
                     this.createTree(Geometry.randomPointIn(this.plateforms));
+
+                player.position = Geometry.randomPointIn(this.plateforms);
 
             }
         }
@@ -350,12 +375,38 @@
                 player.position.x = 0;
                 player.position.y = 0;
 
-                const planet = new Circle({ x: 0, y: 0, r: 200,z: -1,  color: "green" });
+                createStars(this);
+
+                const sun = new Circle({ x: -300, y: -300, r: 20, z: -1, color: "yellow" });
+                this.add(sun);
+
+                const moon = new Circle({ x: 300, y: -300, r: 60, z: -1, color: "gray" });
+                moon.angle = 0;
+                moon.live = () => {
+                    moon.position = Geometry.pointFromRadiusAngle(400, moon.angle);
+                    moon.angle += 0.01;
+                };
+                this.add(moon);
+
+                const planet = new Circle({ x: 0, y: 0, r: 250, z: -1, color: "lightgreen" });
                 this.add(planet);
                 this.plateforms.add(planet);
+
+                const home = new Circle({ x: -25, y: 0, r: 50, z: -0, color: "lightgray" });
+                this.add(home);
+                this.obstacles.add(home);
+
+                for (let j = 0; j <= 10; j++)
+                    this.createTree(Geometry.randomPointIn(new Circle({ x: -50, y: -150, r: 100 })));
+
+                const door = new Door({ x: -25, y: 35 });
+                this.add(door);
+                door.on = () => { Game.setScene(new IslandsScene(player, { x: 0, y: 0 })) };
+                this.doors.add(door);
+
+                this.add(new MisterSaturn({x:100, y:100, color: "red"}));
+
             }
-
-
         }
 
         Game.setScene(new BeginningScene(player));
