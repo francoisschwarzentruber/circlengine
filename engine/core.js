@@ -117,6 +117,13 @@ class InitScene extends Scene {
 }
 
 
+export class GameOverScene extends Scene {
+    draw(ctx) {
+        ctx.fillStyle = "white";
+        ctx.font = "bold 48px serif";
+        ctx.fillText("Game over", 100, 200);
+    }
+}
 
 export class TitleScene extends Scene {
 

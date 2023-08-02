@@ -36,7 +36,7 @@
     </canvas>
     <script type="module">
         import Input from "./engine/input.js";
-        import { Game, Scene, TitleScene } from "./engine/core.js";
+        import { Game, Scene, TitleScene, GameOverScene } from "./engine/core.js";
         import {
             intersects,
             isInside, ensurePositionInside, bounce, Geometry
@@ -205,6 +205,9 @@
 
 
             live() {
+                if (this.player.pv == 0)
+                    Game.setScene(new GameOverScene())
+
                 this.cameraAttach(this.player);
                 Input.control2DCross(this.player, { speed: 3 });
                 ensurePositionInside(this.player, this.plateforms);
@@ -248,7 +251,7 @@
                         if (!this.player.hurt) {
                             for (let i = 0; i < 5; i++)
                                 new Particule({ x: this.player.position.x, y: this.player.position.y, color: "red" });
-                            // this.player.pv--;
+                            this.player.pv--;
                         }
                         setTimeout(() => this.player.hurt = false, 1000);
                         this.player.hurt = true;
@@ -258,10 +261,8 @@
                 /* if (intersects(player, winZone)) {
                      reset();
                  }*/
-                if (this.player.pv == 0) {
-                    this.player.coins = 0;
-                    reset();
-                }
+
+
 
             }
 
@@ -367,7 +368,10 @@
 
                 if (!this.player.energyBall) {
                     for (let j = 0; j < 3; j++) {
-                        const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.plateforms), color: "grey" });
+                        const enemy = new MisterSaturnTopDown({
+                            ...Geometry.randomPointIn(this.plateforms),
+                            color: "darkblue"
+                        });
                         enemy.live = () => {
                             enemy.speed = enemy.direction;
                             if (Math.random() > 0.9) {
