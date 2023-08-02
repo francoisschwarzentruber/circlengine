@@ -6,7 +6,7 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 export class Sound {
-    static play(freq, duration) {
+    static playfreq(freq, duration) {
         console.log(audioCtx)
         const oscillator = audioCtx.createOscillator();
         oscillator.type = 'square';
@@ -16,5 +16,9 @@ export class Sound {
         oscillator.start();
         setInterval(() => oscillator.stop(), duration);
         return oscillator;
+    }
+
+    static play(name) {
+        new Audio('./sounds/' + name).play();
     }
 }

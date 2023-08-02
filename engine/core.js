@@ -1,4 +1,4 @@
-
+import Input from "./input.js";
 
 const ctx = canvas.getContext("2d");
 const beginningTime = Date.now();
@@ -114,7 +114,29 @@ CanvasRenderingContext2D.prototype.arrow = function (x, y, angle, S = 16, A = 0.
 class InitScene extends Scene {
     live() { }
     draw() { }
-    
+}
+
+
+
+export class TitleScene extends Scene {
+
+    constructor(title, startFunction) {
+        super();
+        this.title = title;
+        this.startFunction = startFunction;
+    }
+
+    live() {
+        if (Input.isAction())
+            this.startFunction();
+    }
+    draw(ctx) {
+        ctx.fillStyle = "white";
+        ctx.font = "bold 48px serif";
+        ctx.fillText(this.title, 100, 200);
+        ctx.font = " 10px serif";
+        ctx.fillText("Press enter to start", 300, 300);
+    }
 }
 
 

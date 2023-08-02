@@ -7,7 +7,7 @@
 export default class Input {
     static keys = [];
 
-    static isAction() { return keys[" "]; }
+    static isAction() { return Input.keys[" "]; }
 
     static control2DCross(object) {
         if (Input.keys["ArrowLeft"])

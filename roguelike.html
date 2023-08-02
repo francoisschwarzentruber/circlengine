@@ -36,7 +36,7 @@
     </canvas>
     <script type="module">
         import Input from "./engine/input.js";
-        import { Game, Scene } from "./engine/core.js";
+        import { Game, Scene, TitleScene } from "./engine/core.js";
         import {
             intersects,
             isInside, ensurePositionInside, bounce, Geometry
@@ -119,6 +119,8 @@
             action() {
                 const SPEED = 5;
                 if (weapon == undefined || weapon.isDeleted) {
+                    Sound.play("sword.ogg");
+
                     weapon = new Weapon({
                         x: this.position.x + 24 * this.direction.x,
                         y: this.position.y + 24 * this.direction.y,
@@ -234,6 +236,7 @@
                 if (weapon)
                     for (const enemy of this.enemies)
                         if (intersects(weapon, enemy)) {
+                            Sound.play("fight.ogg");
                             for (let i = 0; i < 15; i++)
                                 this.add(new Particule({ x: enemy.position.x, y: enemy.position.y, color: "red" }));
                             enemy.delete();
@@ -397,6 +400,8 @@
                     this.energyBall = energyBall;
                     this.add(energyBall);
                     energyBall.on = () => {
+                        Sound.play("win.ogg");
+
                         energyBall.delete();
                         Music.play("faureromancessansparole3.ogg");
                         this.player.energyBall = true;
@@ -480,7 +485,9 @@
             }
         }
 
-        Game.setScene(new BeginningScene(player));
+
+        Game.setScene(new TitleScene("Save the moon!", () => Game.setScene(new BeginningScene(player))));
+        //Game.setScene(new BeginningScene(player));
 
     </script>
 </body>
