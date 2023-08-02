@@ -247,10 +247,12 @@
 
                 for (const enemy of this.enemies)
                     if (intersects(this.player, enemy)) {
+
                         bounce(this.player, enemy);
                         if (!this.player.hurt) {
+                            Sound.play("hurt.ogg");
                             for (let i = 0; i < 5; i++)
-                                new Particule({ x: this.player.position.x, y: this.player.position.y, color: "red" });
+                                this.add(new Particule({ x: this.player.position.x, y: this.player.position.y, color: "red" }));
                             this.player.pv--;
                         }
                         setTimeout(() => this.player.hurt = false, 1000);
