@@ -135,27 +135,11 @@
 
 
 
+        const player = new MisterSaturnTopDown({ color: "yellow" });
 
 
 
         class RoguelikeScene extends Scene {
-            createIsland(param) {
-                const island = new Circle(param);
-                this.add(island);
-                this.islands.add(island);
-                const r2 = 32;
-                const N = 10;
-                for (let j = 0; j < N; j++) {
-                    const r2 = param.r / 4;
-                    const angle = 2 * Math.PI * j / N;
-                    const c = new Circle({
-                        x: param.x + param.r * Math.cos(angle), y: param.y + param.r * Math.sin(angle),
-                        z: -3, color: setting.wall(), r: 2 * r2
-                    });
-                    this.add(c);
-                }
-            }
-
             createTree({ x, y }) {
                 const c = new Circle({
                     x, y: y + 8, z: -0.5, color: '#00FF00', r: 12,
@@ -173,88 +157,19 @@
                 this.add(new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r }))
             }
 
-            constructor() {
+            constructor(player) {
                 super();
 
-                this.add(new Circle({ x: 0, y: 0, z: -3, color: setting.background, r: 3000 }));
-
+                
                 this.obstacles = this.createGroup();
                 this.enemies = this.createGroup();
-                this.islands = this.createGroup();
+                this.plateforms = this.createGroup();
                 this.coins = this.createGroup();
                 this.doors = this.createGroup();
 
-                while ((this.islands.size < 10)) {
-                    const r = 96;
-                    const SIZEZONE = 256;
+                this.player = player;
 
-                    let pos;
-
-                    if (this.islands.size == 0)
-                        pos = { x: 2 * SIZEZONE, y: 2 * SIZEZONE };
-                    else {
-                        const A = Array.from(this.islands);
-                        const rPt = { x: -SIZEZONE + Math.random() * SIZEZONE * 4, y: Math.random() * 4 * SIZEZONE - SIZEZONE };
-
-                        function getClosestCircle(islands, rPt) {
-                            let d = 10000000;
-                            let result = undefined;
-                            for (const i of islands) {
-                                const newD = Geometry.distance(rPt, i);
-                                if (newD < d) {
-                                    d = newD;
-                                    result = i;
-                                }
-                            }
-                            return result;
-                        }
-                        const c = getClosestCircle(this.islands, rPt);
-
-                        const angle = Geometry.angleBetween(c, rPt);
-                        pos = Geometry.add(c, Geometry.pointFromRadiusAngle(r / 2 + Math.random() * 3 * r / 4, angle));
-                    }
-                    //  const pos = { x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE }
-                    this.createIsland({ ...pos, z: -2, color: setting.floor, r: r });
-                }
-
-
-
-
-                for (let j = 0; j < 3; j++) {
-                    const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.islands), color: "purple" });
-                    enemy.live = () => {
-                        enemy.speed = enemy.direction;
-                        if (Math.random() > 0.9) {
-                            switch (Math.floor(Math.random() * 4)) {
-                                case 0: enemy.left(); break;
-                                case 1: enemy.up(); break;
-                                case 2: enemy.right(); break;
-                                case 3: enemy.down(); break;
-                            }
-                        }
-                        enemy.go(enemy.direction);
-                    }
-                    this.add(enemy);
-                    this.enemies.add(enemy);
-
-                }
-
-                for (let i = 0; i < 3; i++) {
-                    const posDoor = Geometry.randomPointIn(this.islands);
-                    const door = new Door(posDoor);
-
-                    this.add(door);
-                    this.doors.add(door);
-                }
-
-
-
-
-                for (let j = 0; j <= this.islands.size / 2; j++)
-                    this.createTree(Geometry.randomPointIn(this.islands));
-
-                this.player = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.islands), color: "yellow" });
-                this.add(this.player);
+                this.add(player);
 
             }
 
@@ -262,10 +177,10 @@
             live() {
                 this.cameraAttach(this.player);
                 Input.control2DCross(this.player, { speed: 3 });
-                ensurePositionInside(this.player, this.islands);
+                ensurePositionInside(this.player, this.plateforms);
 
                 for (const enemy of this.enemies) {
-                    ensurePositionInside(enemy, this.islands);
+                    ensurePositionInside(enemy, this.plateforms);
                 }
                 for (const obstacle of this.obstacles) {
                     if (intersects(this.player, obstacle))
@@ -323,7 +238,127 @@
             }
         }
 
-        Game.setScene(new RoguelikeScene());
+
+
+
+
+
+        class IslandsScene extends RoguelikeScene {
+            createIsland(param) {
+                const island = new Circle(param);
+                this.add(island);
+                this.plateforms.add(island);
+                const r2 = 32;
+                const N = 10;
+                for (let j = 0; j < N; j++) {
+                    const r2 = param.r / 4;
+                    const angle = 2 * Math.PI * j / N;
+                    const c = new Circle({
+                        x: param.x + param.r * Math.cos(angle), y: param.y + param.r * Math.sin(angle),
+                        z: -3, color: setting.wall(), r: 2 * r2
+                    });
+                    this.add(c);
+                }
+            }
+
+
+            constructor(player) {
+                super(player);
+
+                this.add(new Circle({ x: 0, y: 0, z: -3, color: setting.background, r: 3000 }));
+
+
+                while ((this.plateforms.size < 10)) {
+                    const r = 96;
+                    const SIZEZONE = 256;
+
+                    let pos;
+
+                    if (this.plateforms.size == 0)
+                        pos = { x: 2 * SIZEZONE, y: 2 * SIZEZONE };
+                    else {
+                        const A = Array.from(this.plateforms);
+                        const rPt = { x: -SIZEZONE + Math.random() * SIZEZONE * 4, y: Math.random() * 4 * SIZEZONE - SIZEZONE };
+
+                        function getClosestCircle(islands, rPt) {
+                            let d = 10000000;
+                            let result = undefined;
+                            for (const i of islands) {
+                                const newD = Geometry.distance(rPt, i);
+                                if (newD < d) {
+                                    d = newD;
+                                    result = i;
+                                }
+                            }
+                            return result;
+                        }
+                        const c = getClosestCircle(this.plateforms, rPt);
+
+                        const angle = Geometry.angleBetween(c, rPt);
+                        pos = Geometry.add(c, Geometry.pointFromRadiusAngle(r / 2 + Math.random() * 3 * r / 4, angle));
+                    }
+                    //  const pos = { x: Math.random() * SIZEZONE, y: Math.random() * SIZEZONE }
+                    this.createIsland({ ...pos, z: -2, color: setting.floor, r: r });
+                }
+
+
+
+
+                for (let j = 0; j < 3; j++) {
+                    const enemy = new MisterSaturnTopDown({ ...Geometry.randomPointIn(this.plateforms), color: "grey" });
+                    enemy.live = () => {
+                        enemy.speed = enemy.direction;
+                        if (Math.random() > 0.9) {
+                            switch (Math.floor(Math.random() * 4)) {
+                                case 0: enemy.left(); break;
+                                case 1: enemy.up(); break;
+                                case 2: enemy.right(); break;
+                                case 3: enemy.down(); break;
+                            }
+                        }
+                        enemy.go(enemy.direction);
+                    }
+                    this.add(enemy);
+                    this.enemies.add(enemy);
+
+                }
+
+
+                for (let i = 0; i < 3; i++) {
+                    const posDoor = Geometry.randomPointIn(this.plateforms);
+                    const door = new Door(posDoor);
+
+                    this.add(door);
+                    this.doors.add(door);
+                }
+
+
+                for (let j = 0; j <= this.plateforms.size / 2; j++)
+                    this.createTree(Geometry.randomPointIn(this.plateforms));
+
+            }
+        }
+
+
+
+
+
+
+        class BeginningScene extends RoguelikeScene {
+            constructor(player) {
+                super(player);
+                player.position.x = 0;
+                player.position.y = 0;
+
+                const planet = new Circle({ x: 0, y: 0, r: 200,z: -1,  color: "green" });
+                this.add(planet);
+                this.plateforms.add(planet);
+            }
+
+
+        }
+
+        Game.setScene(new BeginningScene(player));
 
     </script>
 </body>
