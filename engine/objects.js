@@ -111,7 +111,26 @@ export class MisterSaturn extends Circle {
             ctx.disk(x, y, 5);
         }
 
+
+        const drawFeet = (x,y,r) => {
+            ctx.fillStyle = this.noiseColor;
+            ctx.disk(x, y, r);
+        }
+
+        const s = 5*Math.abs(this.speed.x) + Math.abs(this.speed.y);
+        const F = 0.015;
+
+        if(Math.abs(this.direction.x) > 0) {
+            drawFeet(this.position.x - s*Math.cos(this.time*F), this.position.y + 14 + s/10*Math.sin(this.time*F), 4);
+        }
+
+        if(Math.abs(this.direction.y) > 0) {
+            drawFeet(this.position.x -6, this.position.y + 14 + s*Math.sin(this.time*F), 4);
+            drawFeet(this.position.x + 6, this.position.y + 14 - s*Math.sin(this.time*F), 4);
+        }
+
         super.draw(ctx);
+
         if (this.direction.y >= 0) {
             if (this.direction.x <= 0) {
                 drawEye(this.position.x - 5, this.position.y - 5);
@@ -122,6 +141,15 @@ export class MisterSaturn extends Circle {
             drawNoise(this.position.x + this.direction.x * 16, this.position.y);
 
         }
+
+
+        
+
+        if(Math.abs(this.direction.x) > 0) {
+            drawFeet(this.position.x + s*Math.cos(this.time*F), this.position.y + 14 + s/10*Math.sin(this.time*F), 4);
+        }
+            
+
 
     }
 

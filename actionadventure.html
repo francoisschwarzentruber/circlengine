@@ -115,7 +115,7 @@
 
 
 
-        class MisterSaturnTopDown extends MisterSaturn {
+        class MisterSaturnWithAction extends MisterSaturn {
             action() {
                 const SPEED = 5;
                 if (weapon == undefined || weapon.isDeleted) {
@@ -161,7 +161,7 @@
         }
 
 
-        const player = new MisterSaturnTopDown({ color: "yellow" });
+        const player = new MisterSaturnWithAction({ color: "yellow" });
 
 
 
@@ -370,9 +370,10 @@
 
                 if (!this.player.energyBall) {
                     for (let j = 0; j < 3; j++) {
-                        const enemy = new MisterSaturnTopDown({
+                        const enemy = new MisterSaturnWithAction({
                             ...Geometry.randomPointIn(this.plateforms),
-                            color: "darkblue"
+                            color: "darkblue",
+                            noiseColor: "purple"
                         });
                         enemy.live = () => {
                             enemy.speed = enemy.direction;
