@@ -1,5 +1,9 @@
 # circlengine
-A very tiny engine for creating games where every entity is a circle! A fantasy console that only displays circles.
+
+A very **tiny engine** for creating **video games** where every entity is a **circle**! A **fantasy console** that only displays circles.
+Many retro-style games are pixelized, and refer to pixel art. Here, it is about an **uchrony** where it is easy for computers
+to display circles. The basic drawing primitive is not blitting bitmaps, but drawing colored disks. This repository explores that would have been that uchrony. It consists in
+an imaginary retro-console in that alternate history. The name is a tribute to the PC-engine.
 
 ## Examples
 
