@@ -109,7 +109,8 @@ export class Geometry {
     static generateFarest(generatorFunction, obj) {
         let d = 0;
         let pt = undefined;
-        for (let i = 0; i < 20; i++) {
+        const nbAttempts = 50;
+        for (let i = 0; i < nbAttempts; i++) {
             const newpt = generatorFunction();
             const newd = (obj.x != undefined) ?
                 Geometry.distance(newpt, obj)
@@ -127,7 +128,9 @@ export class Geometry {
     static generateSuchthat(generatorFunction, condition) {
         let d = 0;
         let pt = undefined;
-        for (let i = 0; i < 20; i++) {
+        const nbAttempts = 500;
+
+        for (let i = 0; i < nbAttempts; i++) {
             pt = generatorFunction();
             if (condition(pt))
                 return pt;
