@@ -17,7 +17,7 @@ export class Scene {
         if (this.cameraFollows)
             ctx.translate(-this.cameraFollows.position.x + 320, -this.cameraFollows.position.y + 240);
 
-        this.objects.sort((o1, o2) => (o1.z > o2.z || ((o1.z == o2.z) && (o1.position.y > o2.position.y))));
+        this.objects.sort((o1, o2) => (o1.z > o2.z || ((o1.z == o2.z) && (o1.position.y > o2.position.y)) ? 1:-1));
 
         if (!Game.isPause)
             for (const o of this.objects) o._live(ctx);
