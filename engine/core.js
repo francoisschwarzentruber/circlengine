@@ -6,6 +6,11 @@ const beginningTime = Date.now();
 
 
 export class Scene {
+
+    constructor() {
+        this.beginningTime = Date.now();
+    }
+
     objects = [];
     cameraFollows = undefined;
     drawFixed(ctx) { }
@@ -17,7 +22,7 @@ export class Scene {
         if (this.cameraFollows)
             ctx.translate(-this.cameraFollows.position.x + 320, -this.cameraFollows.position.y + 240);
 
-        this.objects.sort((o1, o2) => (o1.z > o2.z || ((o1.z == o2.z) && (o1.position.y > o2.position.y)) ? 1:-1));
+        this.objects.sort((o1, o2) => (o1.z > o2.z || ((o1.z == o2.z) && (o1.position.y > o2.position.y)) ? 1 : -1));
 
         if (!Game.isPause)
             for (const o of this.objects) o._live(ctx);
@@ -36,7 +41,7 @@ export class Scene {
 
     live() { }
 
-    get time() { return Date.now() - beginningTime; }
+    get time() { return Date.now() - this.beginningTime; }
 
     pause() {
         this.isPause = true;
@@ -60,6 +65,10 @@ export class Scene {
     add(obj) {
         this.objects.push(obj);
     }
+}
+
+CanvasRenderingContext2D.prototype.clear = function () {
+    this.clearRect(0, 0, 640, 480);
 }
 
 CanvasRenderingContext2D.prototype.point = function (x, y) {
@@ -134,15 +143,44 @@ export class TitleScene extends Scene {
     }
 
     live() {
-        if (Input.isAction())
+        if (this.time > 500 && Input.isAction())
             this.startFunction();
     }
     draw(ctx) {
+        ctx.clear();
         ctx.fillStyle = "white";
-        ctx.font = "bold 48px serif";
+        ctx.font = "bold 48px sans serif";
         ctx.fillText(this.title, 100, 200);
-        ctx.font = " 10px serif";
-        ctx.fillText("Press enter to start", 300, 300);
+        ctx.font = " 15px sans serif";
+        ctx.fillText("Press enter to start", 250, 300);
+    }
+}
+
+
+export class CircleEngineLogoScene extends Scene {
+    constructor(future) {
+        super();
+        this.future = future;
+    }
+
+    live() {
+        if(this.time > 500 && Input.isAction())
+                this.future();
+
+        if (this.time > 2000)
+            this.future();
+    }
+    draw(ctx) {
+        ctx.fillStyle = "white";
+        ctx.disk(250, 240, Math.min(32, this.time * 0.05));
+        
+        /*ctx.font = "italic 18px sans serif";
+        ctx.fillText("Fantasy console", 250, 300);
+*/      
+        ctx.font = "bold 32px sans serif";
+        ctx.fillText("engine", 290, 250);
+
+
     }
 }
 

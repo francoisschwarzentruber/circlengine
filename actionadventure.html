@@ -36,7 +36,7 @@
     </canvas>
     <script type="module">
         import Input from "./engine/input.js";
-        import { Game, Scene, TitleScene, GameOverScene } from "./engine/core.js";
+        import { Game, Scene, CircleEngineLogoScene, TitleScene, GameOverScene } from "./engine/core.js";
         import {
             intersects,
             isInside, ensurePositionInside, bounce, Geometry
@@ -493,7 +493,9 @@
         }
 
 
-        Game.setScene(new TitleScene("Save the moon!", () => Game.setScene(new BeginningScene(player))));
+        Game.setScene(new CircleEngineLogoScene(
+            () =>
+                Game.setScene(new TitleScene("Save the moon!", () => Game.setScene(new BeginningScene(player))))));
         //Game.setScene(new BeginningScene(player));
 
     </script>
