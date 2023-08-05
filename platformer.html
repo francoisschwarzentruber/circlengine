@@ -180,6 +180,10 @@
                 }
 
                 for (const enemy of this.enemies)
+                    if (enemy.position.y > 500)
+                        enemy.delete();
+
+                for (const enemy of this.enemies)
                     for (const enemy2 of this.enemies)
                         if (enemy != enemy2)
                             if (intersects(enemy, enemy2)) {
@@ -210,9 +214,7 @@
                         player.hurt = true;
                     }
 
-                if (intersects(player, this.winZone)) {
-                    Game.setScene(new TitleScene("You win!"), () => Game.setScene(new Level1Scene()));
-                }
+
 
             }
 
@@ -269,6 +271,27 @@
                         });
                         this.add(platform);
                         this.obstacles.add(platform);
+                        const px = x;
+                        const py = y;
+                        platform.live = () => {
+                            if (platform.time % 2 == 0)
+                                return;
+
+                            if (this.enemies.size > 0)
+                                return;
+                            const dropx = px + randomAmplitude(30);
+                            const dropy = py + 32 + randomAmplitude(30);
+                            const drop = new Circle({
+                                x: dropx, y: dropy, r: 3, z: 2, color: "lightblue",
+                                live: () => {
+                                    //    drop.position.x = dropx - drop.time;
+                                    drop.position.y = dropy + drop.time / 4;
+                                    if (drop.position.y > 1000)
+                                        drop.delete();
+                                }
+                            });
+                            this.add(drop);
+                        }
                         x = x + 16;
                     }
 
@@ -277,10 +300,6 @@
                     this.enemies.add(enemy);
                 }
 
-
-
-
-
                 this.winZone = new Vortex({ x: x - 32, y: -50 });
                 this.add(this.winZone);
             }
@@ -288,12 +307,20 @@
 
             live() {
                 super.live();
+
+                if (intersects(player, this.winZone) && this.enemies.size == 0) {
+                    Game.setScene(new Level1Scene());
+                }
             }
         }
 
+        Game.setScene(new CircleEngineLogoScene(
+            () => Game.setScene(new TitleScene("Against the\nrain captors",
+                () => Game.setScene(new Level1Scene())
+            )
+            )));
 
-        Game.setScene(new Level1Scene())
-
+     //   Game.setScene(new Level1Scene());
 
     </script>
 </body>

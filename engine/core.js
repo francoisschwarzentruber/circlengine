@@ -143,7 +143,9 @@ export class TitleScene extends Scene {
         ctx.clear();
         ctx.fillStyle = "white";
         ctx.font = "bold 48px sans serif";
-        ctx.fillText(this.title, 100, 200);
+        const lines = this.title.split('\n');
+        for (let i = 0; i < lines.length; i++)
+            ctx.fillText(lines[i], 100, 200 + i * 48);
         ctx.font = " 15px sans serif";
         ctx.fillText("Press enter to start", 250, 300);
     }
