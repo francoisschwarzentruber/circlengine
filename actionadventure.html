@@ -117,6 +117,9 @@
 
         class MisterSaturnWithAction extends MisterSaturn {
             action() {
+                if (Game.scene.time < 1000)
+                    return;
+
                 const SPEED = 5;
                 if (weapon == undefined || weapon.isDeleted) {
                     Sound.play("sword.ogg");
@@ -164,8 +167,7 @@
         const player = new MisterSaturnWithAction({ color: "yellow" });
 
 
-
-        class RoguelikeScene extends Scene {
+        class ActionAdventureScene extends Scene {
             createTree({ x, y }) {
                 const c = new Circle({
                     x, y: y + 8, z: -0.5, color: '#00FF00', r: 12,
@@ -211,6 +213,7 @@
                 this.cameraAttach(this.player);
                 Input.control2DCross(this.player, { speed: 3 });
                 ensurePositionInside(this.player, this.plateforms);
+
 
                 for (const enemy of this.enemies) {
                     ensurePositionInside(enemy, this.plateforms);
@@ -285,7 +288,7 @@
 
 
 
-        class CaveScene extends RoguelikeScene {
+        class CaveScene extends ActionAdventureScene {
             createIsland(param) {
                 const island = new Circle(param);
                 this.add(island);
@@ -424,7 +427,7 @@
 
 
 
-        class BeginningScene extends RoguelikeScene {
+        class BeginningScene extends ActionAdventureScene {
             constructor(player) {
                 super(player);
 

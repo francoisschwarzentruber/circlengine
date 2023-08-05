@@ -119,13 +119,6 @@ CanvasRenderingContext2D.prototype.arrow = function (x, y, angle, S = 16, A = 0.
 
 
 
-
-class InitScene extends Scene {
-    live() { }
-    draw() { }
-}
-
-
 export class GameOverScene extends Scene {
     draw(ctx) {
         ctx.fillStyle = "white";
@@ -164,23 +157,17 @@ export class CircleEngineLogoScene extends Scene {
     }
 
     live() {
-        if(this.time > 500 && Input.isAction())
-                this.future();
-
+        if (this.time > 500 && Input.isAction())
+            this.future();
         if (this.time > 2000)
             this.future();
     }
     draw(ctx) {
         ctx.fillStyle = "white";
         ctx.disk(250, 240, Math.min(32, this.time * 0.05));
-        
-        /*ctx.font = "italic 18px sans serif";
-        ctx.fillText("Fantasy console", 250, 300);
-*/      
+
         ctx.font = "bold 32px sans serif";
         ctx.fillText("engine", 290, 250);
-
-
     }
 }
 
@@ -192,7 +179,7 @@ export class Game {
 }
 
 
-Game.setScene(new InitScene());
+Game.setScene(new CircleEngineLogoScene(() => { }));
 
 
 function animate() {
@@ -203,7 +190,6 @@ function animate() {
     ctx.resetTransform();
     Game.scene.drawFixed(ctx);
 }
-
 
 animate();
 

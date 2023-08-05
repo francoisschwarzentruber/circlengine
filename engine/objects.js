@@ -1,5 +1,5 @@
 import { randomAmplitude } from "./random.js";
-import {Game} from "./core.js";
+import { Game } from "./core.js";
 
 export class PhysicalObject {
     position;
@@ -112,21 +112,21 @@ export class MisterSaturn extends Circle {
         }
 
 
-        const drawFeet = (x,y,r) => {
+        const drawFeet = (x, y, r) => {
             ctx.fillStyle = this.noiseColor;
             ctx.disk(x, y, r);
         }
 
-        const s = 5*Math.abs(this.speed.x) + Math.abs(this.speed.y);
+        const s = Math.abs(this.direction.x) > 0 ? 5 * Math.abs(this.speed.x) : Math.abs(this.speed.y);
         const F = 0.015;
 
-        if(Math.abs(this.direction.x) > 0) {
-            drawFeet(this.position.x - s*Math.cos(this.time*F), this.position.y + 14 + s/10*Math.sin(this.time*F), 4);
+        if (Math.abs(this.direction.x) > 0) {
+            drawFeet(this.position.x - s * Math.cos(this.time * F), this.position.y + 14 + s / 10 * Math.sin(this.time * F), 4);
         }
 
-        if(Math.abs(this.direction.y) > 0) {
-            drawFeet(this.position.x -6, this.position.y + 14 + s*Math.sin(this.time*F), 4);
-            drawFeet(this.position.x + 6, this.position.y + 14 - s*Math.sin(this.time*F), 4);
+        if (Math.abs(this.direction.y) > 0) {
+            drawFeet(this.position.x - 6, this.position.y + 14 + s * Math.sin(this.time * F), 4);
+            drawFeet(this.position.x + 6, this.position.y + 14 - s * Math.sin(this.time * F), 4);
         }
 
         super.draw(ctx);
@@ -143,12 +143,12 @@ export class MisterSaturn extends Circle {
         }
 
 
-        
 
-        if(Math.abs(this.direction.x) > 0) {
-            drawFeet(this.position.x + s*Math.cos(this.time*F), this.position.y + 14 + s/10*Math.sin(this.time*F), 4);
+
+        if (Math.abs(this.direction.x) > 0) {
+            drawFeet(this.position.x + s * Math.cos(this.time * F), this.position.y + 14 + s / 10 * Math.sin(this.time * F), 4);
         }
-            
+
 
 
     }
@@ -162,5 +162,5 @@ export class MisterSaturn extends Circle {
     right() { this.go({ x: 1, y: 0 }); }
     up() { this.go({ x: 0, y: -1 }); }
     down() { this.go({ x: 0, y: 1 }); }
-    
+
 }

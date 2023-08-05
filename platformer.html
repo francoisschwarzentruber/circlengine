@@ -34,58 +34,40 @@
     <canvas id="canvas" width="640" height="480">
     </canvas>
     <script type="module">
-        import game from "./engine.js";
-        import { Circle, Particule, Sound, Control, intersects, isInside, ensurePositionInside, moveOutside, randomAmplitude, randomColor, Geometry } from "./engine.js";
+        import Input from "./engine/input.js";
+        import { Game, Scene, CircleEngineLogoScene, TitleScene, GameOverScene } from "./engine/core.js";
+        import {
+            intersects,
+            isInside, ensurePositionInside, bounce, Geometry, moveOutside
+        } from "./engine/physics.js";
+
+        import {
+            Sound
+        } from "./engine/sound.js";
+
+        import {
+            Circle, Particule, MisterSaturn
+        } from "./engine/objects.js";
+
+        import { randomColor, randomAmplitude } from "./engine/random.js";
+
+        import { Music } from "./engine/music.js";
 
 
-        class Cloud {
-            constructor({ x, y, r = 100 }) {
-                const c = new Circle({ x, y, r, z: 10, color: "#FFFFFF22" });
-                c.live = () => {
-                    c.position.x += randomAmplitude(5);
-                    c.position.y += randomAmplitude(5);
-                }
-            }
-        }
 
 
-        const gravity = 9
+        const gravity = 3
         const speed = 2;
 
-        class MisterSaturn extends Circle {
+        class MisterSaturnPlatform extends MisterSaturn {
             constructor({ x, y, color }) {
-                super({
-                    x, y, z: 0, color, r: 16,
-                    pv: 3, coin: 0,
-
-                });
-                this.direction = 1;
-                this.eye = new Circle({ x, y, r: 6, z: 1, color: "white", stroke: "black" });
-                this.eyeInside = new Circle({ x, y, r: 3, z: 2, color: "black" });
-                this.noise = new Circle({ x, y, r: 5, z: 1, color });
+                super({ x, y, color });
+                this.direction = { x: 1, y: 0 };
 
             }
 
-            live() {
-                if (this.platformCurrent == undefined)
-                    this.acceleration.y = Math.min(3, this.acceleration.y + 0.2);
-                else
-                    this.acceleration.y = 0;
-                this.r = 16 - this.acceleration.y / 4;
-                this.eye.position = { x: this.position.x + this.direction * 5, y: this.position.y - 5 };
-
-                this.eyeInside.position = {
-                    x: this.position.x + this.direction * 8 + Math.cos(game.time / 300),
-                    y: this.position.y - 5 + Math.sin(game.time / 300)
-                };
-
-                this.noise.position = { x: this.position.x + this.direction * 16, y: this.position.y };
-
-
-            }
-            
             go(d) {
-                this.direction = d;
+                this.direction = { x: d, y: 0 };
                 if (this.platformCurrent) {
                     const a = Math.atan2(this.position.y - this.platformCurrent.position.y, this.position.x - this.platformCurrent.position.x)
                     this.speed = Geometry.add(this.speed, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
@@ -93,39 +75,42 @@
                 else
                     this.speed = { x: speed * d, y: 0 };
             }
+
             left() { this.go(-1); }
             right() { this.go(1); }
             up() { }
             down() { }
             action() {
                 if (this.platformCurrent) {
-                    this.acceleration = { x: 0, y: -5 };
+                    this.acceleration = { x: 0, y: -5 - Math.abs(this.speed.x) };
                     this.speed = { x: 0, y: 0 };
                 }
+            }
+
+            live() {
+                this.acceleration.y += 0.5;
+                if (this.acceleration.y > gravity)
+                    this.acceleration.y = gravity;
             }
         }
 
 
 
-        class PNJ extends MisterSaturn {
-            constructor({ x, y }) {
-                super({ x, y, color: "green" });
-                this.direction = 1;
+        class Enemy extends MisterSaturnPlatform {
+            constructor({ x, y, color = "green" }) {
+                super({ x, y, color });
+                this.direction = { x: 1, y: 0 };
             }
 
             live() {
                 super.live();
-                if (this.platformCurrent) {
-                    const a = Geometry.angleBetween(this, this.platformCurrent);
+                if (Math.random() < 0.05)
+                    this.direction.x = -this.direction.x;
 
-                    if (this.direction * (a - Math.PI / 2) > Math.PI / 5)
-                        this.direction = -this.direction;
-
-                    if (this.direction < 0)
-                        this.left();
-                    else
-                        this.right();
-                }
+                if (this.direction.x < 0)
+                    this.left();
+                else
+                    this.right();
             }
 
         }
@@ -148,195 +133,168 @@
             }
         }
 
-
-
-
-        let obstacles = game.createGroup();
-        let enemies = game.createGroup();
-        let coins = game.createGroup();
-        let misters = game.createGroup();
-
-
-        function createEnemyBlob(platform, angle) {
-            const ennemyR = 6;
-            const direction = Math.random() > 0.5 ? 1 : -1;
-
-            for (let j = 0; j < 5; j++) {
-                const rball = ennemyR;
-                const rShift = randomAmplitude(5);
-                const enemy = new Circle({
-                    x: platform.position.x, y: platform.position.y, z: 1, color: randomColor(255, 0, 0), rball,
-                    live: () => {
-                        enemy.position = Geometry.pointFromCenterRadiusAngle(platform.position.x, platform.position.y, platform.r, angle + j / 6 + direction * game.time / 400);
-                        enemy.r = rball + rball / 3 * Math.cos(rShift + enemy.time / 200)
-                    }
-                })
-                enemies.add(enemy)
-
-            }
-        }
-
-
-
-
-
-
-        class Obstacle extends Circle {
-            constructor({ x, y, r }) {
-                const nbConcentricCircles = 6;
-                const platformShift = randomAmplitude(32);
-                const mobile = Math.random() > 0.5;
-
-                super({
-                    x, y, color: randomColor(0, 192, 0), r, live: () => {
-                        if (mobile)
-                            this.speed.y = Math.cos(platformShift + this.time / 400);
-                        for (let i = 0; i < nbConcentricCircles; i++) {
-                            this.circles[i].position.x = this.position.x;
-                            this.circles[i].position.y = this.position.y;
-
-                        }
-                    }
-                });
-
-                this.circles = [];
-
-                for (let i = 0; i < nbConcentricCircles; i++) {
-                    this.circles.push(new Circle({ x: x + randomAmplitude(10), y: y, color: randomColor(0, 192, 0), r: r - i * r / nbConcentricCircles }));
-                }
-            }
-        }
-
-
-
         let player;
-        let winZone;
-
-        function createScene() {
-
-            new Circle({ x: 0, y: 0, z: -1, color: "lightblue", r: 1280 });
-
-            player = new MisterSaturn({ x: 0, y: -200, color: "yellow" });
-            misters.add(player)
-
-            let x = 0;
-            let y = 0;
 
 
-
-            for (let i = 0; i < 10; i++) {
-
-                const xx = x;
-                const yy = y;
-                const r = 64 + randomAmplitude(32);
-                const platform = new Obstacle({ x, y, r });
-
-
-                obstacles.add(platform);
-
-                const shift = randomAmplitude(2);
-
-                if (i > 0) {
-
-                    if (Math.random() > 0.5) {
-                        const pnj = new PNJ({ x, y: y - 100 });
-                        misters.add(pnj);
-                        obstacles.add(pnj);
-                    }
-                    else {
-                        createEnemyBlob(platform, shift);
-
-                        if (Math.random() > 0.5)
-                            createEnemyBlob(platform, shift + Math.PI);
-
-                    }
-
-                }
-                const coin = new Circle({
-                    x: x, y: y - r - 50, color: "yellow", stroke: "black", r: 8,
-                    live: () => {
-                        coin.r = 8 + randomAmplitude(1);
-                    }
-                });
-                coins.add(coin);
-
-                new Cloud({ x, y: y - 300 });
-
-                x += 150 + randomAmplitude(50);
-                y -= 32 + randomAmplitude(32);
-
+        class PlatformerScene extends Scene {
+            constructor() {
+                super();
+                this.obstacles = this.createGroup();
+                this.enemies = this.createGroup();
+                this.plateforms = this.createGroup();
+                this.items = this.createGroup();
+                this.doors = this.createGroup();
             }
-            winZone = new Vortex({ x, y });
-        }
 
 
 
-        function reset() {
-            game.reset();
-            createScene();
-        }
+            live(ctx) {
+                if (player.pv == 0 || player.position.y > 300) {
+                    player.coins = 0;
+                    Game.setScene(new GameOverScene());
+                }
 
+                this.cameraAttach(player);
+                Input.control2DCross(player, { speed: 3 });
 
+                const handleMister = (mister) => {
+                    mister.platformCurrent = undefined;
+                    for (const obstacle of this.obstacles) {
+                        if (mister != obstacle)
+                            if (intersects(mister, obstacle)) {
+                                mister.speed.x += obstacle.speed.x;
+                                mister.speed.y += obstacle.speed.y;
+                                moveOutside(mister, obstacle);
+                                mister.platformCurrent = obstacle;
+                            }
+                    }
+                }
+                for (const enemy of this.enemies) handleMister(enemy);
+                handleMister(player)
 
-        reset();
+                for (const item of this.items) {
+                    if (intersects(player, item)) {
+                        game.delete(item);
+                        player.coin++;
+                    }
+                }
 
-        game.live = (ctx) => {
-            game.cameraAttach(player);
-            Control.control2DCross(player, { speed: 3 });
+                for (const enemy of this.enemies)
+                    for (const enemy2 of this.enemies)
+                        if (enemy != enemy2)
+                            if (intersects(enemy, enemy2)) {
+                                moveOutside(enemy2, enemy);
+                            }
+                for (const enemy of this.enemies)
+                    if (intersects(player, enemy)) {
+                        moveOutside(player, enemy);
 
-            for (const mister of misters) {
-                mister.platformCurrent = undefined;
-                for (const obstacle of obstacles) {
-                    if (mister != obstacle)
-                        if (intersects(mister, obstacle)) {
-                            mister.speed.x += obstacle.speed.x;
-                            mister.speed.y += obstacle.speed.y;
-                            moveOutside(mister, obstacle);
-                            mister.platformCurrent = obstacle;
+                        if (player.position.y < enemy.position.y - 16) {
+                            enemy.delete();
+                            Sound.play("smash.ogg");
+
+                            player.acceleration.y = -5;
+                            for (let i = 0; i < 10; i++)
+                                this.add(new Particule({ x: player.position.x, y: player.position.y, color: enemy.color }));
+
                         }
-                }
-            }
+                        else
+                            if (!player.hurt) {
+                                Sound.play("hurt.ogg");
 
-
-            for (const coin of coins) {
-                if (intersects(player, coin)) {
-                    game.delete(coin);
-                    player.coin++;
-                }
-            }
-            for (const enemy of enemies)
-                if (intersects(player, enemy)) {
-                    moveOutside(player, enemy);
-                    if (!player.hurt) {
-                        for (let i = 0; i < 5; i++)
-                            new Particule({ x: player.position.x, y: player.position.y, color: "red" });
-                        player.pv--;
+                                for (let i = 0; i < 10; i++)
+                                    this.add(new Particule({ x: player.position.x, y: player.position.y, color: player.color }));
+                                player.pv--;
+                            }
+                        setTimeout(() => player.hurt = false, 1000);
+                        player.hurt = true;
                     }
-                    setTimeout(() => player.hurt = false, 1000);
-                    player.hurt = true;
+
+                if (intersects(player, this.winZone)) {
+                    Game.setScene(new TitleScene("You win!"), () => Game.setScene(new Level1Scene()));
                 }
 
-            if (intersects(player, winZone)) {
-                reset();
             }
-            if (player.pv == 0 || player.position.y > 100) {
-                player.coins = 0;
-                reset();
+
+
+            drawFixed(ctx) {
+                for (let i = 0; i < player.pv; i++) {
+                    ctx.fillStyle = "red";
+                    ctx.disk(16 + 24 * i, 16, 10);
+                }
+            }
+        }
+        function createStars(scene) {
+            for (let i = 0; i < 1000; i++) {
+                const x = Math.random() * 10000 - 500;
+                const y = Math.random() * 1000 - 500;
+                scene.add(new Circle({ x, y, color: "white", r: 2, }))
             }
         }
 
 
-        game.drawFixed = (ctx) => {
-            for (let i = 0; i < player.pv; i++) {
-                ctx.fillStyle = "red";
-                ctx.disk(16 + 24 * i, 16, 10);
+        class Level1Scene extends PlatformerScene {
+
+            constructor() {
+                super();
+                for (let x = 0; x < 10000; x += 1000) {
+                    const background = new Circle({ x, y: 0, z: -1, color: "#000044", r: 1280 });
+                    this.add(background);
+                }
+
+                createStars(this)
+                for (let x = 0; x < 10000; x += 100) {
+                    const cloud = new Circle({
+                        x: x + 100 * Math.random(),
+                        y: -300 + 500 * Math.random(),
+                        color: "#FFFFFF22", r: 100
+                    });
+                    this.add(cloud);
+
+                }
+
+                player = new MisterSaturnPlatform({ x: 0, y: -200, color: "red" });
+                player.pv = 10;
+                this.add(player)
+                let x = -132;
+                let y = 0;
+                for (let j = 0; j < 20; j++) {
+                    x = x + 32;
+                    y = -60 * Math.sin(j);
+                    const l = 1 + Math.random() * 5;
+                    for (let i = 0; i < l; i++) {
+                        const platform = new Circle({
+                            x, y: y + 5 * Math.sin(i) * Math.cos(i), r: 32,
+                            color: "#FFFFFFDD",
+                        });
+                        this.add(platform);
+                        this.obstacles.add(platform);
+                        x = x + 16;
+                    }
+
+                    const enemy = new Enemy({ x, y: y - 100, color: randomColor(0, 128, 255) });
+                    this.add(enemy);
+                    this.enemies.add(enemy);
+                }
+
+
+
+
+
+                this.winZone = new Vortex({ x: x - 32, y: -50 });
+                this.add(this.winZone);
             }
 
-            ctx.fillStyle = "yellow";
-            ctx.disk(200, 16, 10);
-            ctx.fillStyle = "black";
-            ctx.fillText("x " + player.coin, 214, 20);
+
+            live() {
+                super.live();
+            }
         }
+
+
+        Game.setScene(new Level1Scene())
+
+
     </script>
 </body>
 
