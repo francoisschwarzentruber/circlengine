@@ -127,6 +127,7 @@ export class GameOverScene extends Scene {
     }
 }
 
+let debug = true;
 export class TitleScene extends Scene {
 
     constructor(title, startFunction) {
@@ -141,13 +142,21 @@ export class TitleScene extends Scene {
     }
     draw(ctx) {
         ctx.clear();
+        console.log("draw Title whereas " + Game.iTransition);
+        if (debug) console.trace();
+        debug = false;
         ctx.fillStyle = "white";
+        ctx.textAlign = "center";
         ctx.font = "bold 48px sans serif";
         const lines = this.title.split('\n');
-        for (let i = 0; i < lines.length; i++)
-            ctx.fillText(lines[i], 100, 200 + i * 48);
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], 320, 200 + i * 48);
+
+        }
         ctx.font = " 15px sans serif";
-        ctx.fillText("Press enter to start", 250, 300);
+        ctx.fillText("Press enter to start", 320, 300);
+        ctx.textAlign = "left";
+
     }
 }
 
@@ -175,8 +184,32 @@ export class CircleEngineLogoScene extends Scene {
 
 
 export class Game {
+    static iTransition = 0;
+    static scene = undefined;
+
     static setScene(scene) {
+        if (Game.scene && !(scene instanceof CircleEngineLogoScene))
+            Game.iTransition = 1;
         Game.scene = scene;
+    }
+
+
+    static draw(ctx) {
+        if (Game.iTransition == 0) {
+            Game.scene.live();
+
+            if (Game.iTransition == 0)
+                Game.scene.draw(ctx);
+            ctx.resetTransform();
+            Game.scene.drawFixed(ctx);
+        } else {
+            ctx.fillStyle = "#00000022";
+            ctx.fillRect(0, 0, 640, 480);
+            Game.iTransition++;
+
+            if (Game.iTransition > 20)
+                Game.iTransition = 0;
+        }
     }
 }
 
@@ -186,11 +219,8 @@ Game.setScene(new CircleEngineLogoScene(() => { }));
 
 function animate() {
     requestAnimationFrame(animate);
-    Game.scene.live();
-    const ctx = canvas.getContext("2d")
-    Game.scene.draw(ctx);
-    ctx.resetTransform();
-    Game.scene.drawFixed(ctx);
+    const ctx = canvas.getContext("2d");
+    Game.draw(ctx);
 }
 
 animate();

@@ -9,4 +9,11 @@ export class Music {
         this.music.play();
 
     }
+
+
+    static stop() {
+        if (this.music) {
+            this.music.pause();
+        }
+    }
 }

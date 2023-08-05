@@ -57,7 +57,7 @@
 
 
         const gravity = 3
-        const speed = 2;
+        const speed = 3;
 
         class MisterSaturnPlatform extends MisterSaturn {
             constructor({ x, y, color }) {
@@ -68,12 +68,12 @@
 
             go(d) {
                 this.direction = { x: d, y: 0 };
-                if (this.platformCurrent) {
-                    const a = Math.atan2(this.position.y - this.platformCurrent.position.y, this.position.x - this.platformCurrent.position.x)
-                    this.speed = Geometry.add(this.speed, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
-                }
-                else
-                    this.speed = { x: speed * d, y: 0 };
+                /*  if (this.platformCurrent) {
+                      const a = Math.atan2(this.position.y - this.platformCurrent.position.y, this.position.x - this.platformCurrent.position.x)
+                      this.speed = Geometry.add(this.speed, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
+                  }
+                  else*/
+                this.speed = { x: speed * d, y: 0 };
             }
 
             left() { this.go(-1); }
@@ -82,6 +82,8 @@
             down() { }
             action() {
                 if (this.platformCurrent) {
+                    Sound.play("jump.ogg");
+
                     this.acceleration = { x: 0, y: -5 - Math.abs(this.speed.x) };
                     this.speed = { x: 0, y: 0 };
                 }
@@ -230,7 +232,7 @@
             for (let i = 0; i < 1000; i++) {
                 const x = Math.random() * 10000 - 500;
                 const y = Math.random() * 1000 - 500;
-                scene.add(new Circle({ x, y, color: "white", r: 2, }))
+                scene.add(new Circle({ x, y, color: "white", z:-1, r: 2, }))
             }
         }
 
@@ -239,8 +241,9 @@
 
             constructor() {
                 super();
+                this.isRaining = false;
                 for (let x = 0; x < 10000; x += 1000) {
-                    const background = new Circle({ x, y: 0, z: -1, color: "#000044", r: 1280 });
+                    const background = new Circle({ x, y: 0, z: -3, color: "#000044", r: 1280 });
                     this.add(background);
                 }
 
@@ -308,6 +311,11 @@
             live() {
                 super.live();
 
+                if (this.enemies.size == 0 && !this.isRaining) {
+                    Music.play("rain.mp3");
+                    this.isRaining = true;
+                }
+
                 if (intersects(player, this.winZone) && this.enemies.size == 0) {
                     Game.setScene(new Level1Scene());
                 }
@@ -315,7 +323,7 @@
         }
 
         Game.setScene(new CircleEngineLogoScene(
-            () => Game.setScene(new TitleScene("Against the\nrain captors",
+            () => Game.setScene(new TitleScene("Save the rain",
                 () => Game.setScene(new Level1Scene())
             )
             )));
