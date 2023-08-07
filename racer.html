@@ -52,14 +52,14 @@
             Circle, Particule, MisterSaturn
         } from "./engine/objects.js";
 
-        import { randomColor, randomAmplitude } from "./engine/random.js";
+        import { randomColor, randomColorAlpha, randomAmplitude } from "./engine/random.js";
 
         import { Music } from "./engine/music.js";
 
 
 
 
-        const A = 0.3;
+        const A = 0.6;
         const turnSpeed = 0.02;
         const decelerationFactor = 0.9;
 
@@ -67,6 +67,17 @@
             constructor({ x, y, color = "red" }) {
                 super({ x, y, r: 16, color });
                 this.angle = -Math.PI / 2;
+            }
+
+            get direction() {
+                return { x: Math.cos(this.angle), y: Math.sin(this.angle) };
+            }
+
+            get butt() {
+                return {
+                    x: this.position.x - this.r * this.direction.x,
+                    y: this.position.y - this.r * this.direction.y
+                }
             }
 
             turn(d) {
@@ -90,12 +101,7 @@
                 this.acceleration.y -= A * Math.sin(this.angle);
             }
             action() {
-                if (this.platformCurrent) {
-                    Sound.play("jump.ogg");
-
-                    this.acceleration = { x: 0, y: -5 - Math.abs(this.speed.x) };
-                    this.speed = { x: 0, y: 0 };
-                }
+                this.up();
             }
 
             handleAcceleration() {
@@ -143,12 +149,35 @@
 
 
         class RacerScene extends Scene {
+
+            createTree({ x, y }) {
+                const c = new Circle({
+                    x, y: y + 8, z: -0.5, color: '#00FF00', r: 12,
+                });
+                this.add(c);
+                this.obstacles.add(c);
+                const r = 16 + randomAmplitude(8);
+                for (let i = 0; i < 4; i++)
+                    this.add(new Circle({
+                        x: x + randomAmplitude(16),
+                        y: y + 16 + randomAmplitude(16), z: -1, color: randomColor(128, 64, 64), r: 12
+                    }));
+
+                this.add(new Circle({ x, y: y + 16, z: -0.5, color: randomColor(128, 0, 0), r: 8 }));
+                this.add(new Circle({ x, y, z: 0, color: randomColor(0, 128, 0), r: r }))
+            }
+
+
+
             constructor() {
                 super();
+                Music.play("Gyorgy Cziffra - Liszt Grand Galop Chromatique -(128kbps).ogg")
+
                 this.obstacles = this.createGroup();
                 this.cars = this.createGroup();
                 this.road = this.createGroup();
                 this.items = this.createGroup();
+                this.preparation = 180;
             }
 
 
@@ -156,9 +185,19 @@
             live(ctx) {
 
                 this.cameraAttach(player);
-                Input.control2DCross(player, { speed: 3 });
+                this.preparation--;
+
+                if (this.preparation < 0)
+                    Input.control2DCross(player, { speed: 3 });
 
                 const handleCars = (car) => {
+                    this.add(new Particule({
+                        x: car.butt.x + randomAmplitude(8),
+                        y: car.butt.y + randomAmplitude(8),
+                        r: 2 + 2 * Geometry.norm(car.speed),
+                        color: randomColorAlpha(64, 64, 64, 0.05)
+                    }));
+
                     for (const obstacle of this.obstacles) {
                         if (car != obstacle)
                             if (intersects(car, obstacle)) {
@@ -169,7 +208,7 @@
                     }
                 }
                 for (const enemy of this.cars) handleCars(enemy);
-                handleCars(player)
+                handleCars(player);
 
                 for (const item of this.items) {
                     if (intersects(player, item)) {
@@ -193,12 +232,52 @@
                         }
 
 
+                for (const c of this.road)
+                    if (intersects(c, player)) {
+                        console.log("yes")
+                        c.visited = true;
+                    }
+
+                if ([...this.road].every((c) => c.visited)) {
+                    if (this.score == undefined)
+                        this.score = this.time;
+
+                }
             }
 
 
             drawFixed(ctx) {
                 ctx.fillStyle = "black";
-                ctx.fillText((Geometry.norm(player.speed)*30).toFixed(0) + "km/h", 0, 32)
+                ctx.fillText((Geometry.norm(player.speed) * 30).toFixed(0) + "km/h", 0, 32)
+
+                if (this.preparation < 0)
+                    Music.music.playbackRate = 0.5 + 0.5 * Geometry.norm(player.speed) / 10;
+
+                ctx.fillStyle = "black";
+
+                let time = this.score ? this.score : this.time;
+                const millisec = (time % 1000).toString().padStart(3, '0');
+                time = Math.floor(time / 1000);
+                const secondes = (time % 60).toString().padStart(2, '0');
+
+                time = Math.floor(time / 60);
+                const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+
+                ctx.fillText(minutes + ":" + secondes + ":" + millisec, 450, 32)
+
+                if (this.score) {
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Course cleared!", 200, 150)
+                }
+
+                if (this.preparation > 0) {
+                    ctx.fillStyle = "black";
+                    ctx.fillText(Math.floor(this.preparation / 60) + 1, 100, 150)
+                }
+                else if (this.preparation > -200) {
+                    ctx.fillStyle = "black";
+                    ctx.fillText("Go!", 100, 150)
+                }
             }
         }
 
@@ -208,7 +287,6 @@
 
             constructor() {
                 super();
-
                 const dt = 0.0012;
                 /*const f = (t) => {
                     const angle = t * 2 * Math.PI;
@@ -240,9 +318,9 @@
                     const pt = f(t);
 
                     const C = new Circle({
-                        x: pt.x, y: pt.y, r: width(t),
+                        x: pt.x, y: pt.y, r: width(t) - 4,
                         color: randomColor(192, 128, 64, 32),
-                        z: -1,
+                        z: -1 + t,
                     });
 
                     this.road.add(C);
@@ -257,17 +335,26 @@
                     const d2 = width(t);
 
                     const C1 = new Circle({
-                        x: pt.x - vectorU.y * d2, y: pt.y + vectorU.x * d2, r: 8,
-                        color: "#FFFFFFDD",
+                        x: pt.x - vectorU.y * d2, y: pt.y + vectorU.x * d2, r: 8, z: -1 + t + 0.01,
+                        color: Math.abs(t) < dt ? "black" : "#FFFFFFDD",
                     });
                     C1.left = true;
 
                     const C2 = new Circle({
-                        x: pt.x + vectorU.y * d2, y: pt.y - vectorU.x * d2, r: 8,
-                        color: "#FFFFFFDD",
+                        x: pt.x + vectorU.y * d2, y: pt.y - vectorU.x * d2, r: 8, z: -1 + t + 0.01,
+                        color: Math.abs(t) < dt ? "black" : "#FFFFFFDD",
                     });
                     C1.right = true;
 
+                    if (Math.random() < 0.5) {
+                        const T = 32+64*Math.random();
+                        this.createTree({ x: pt.x - vectorU.y * (d2 + T), y: pt.y + vectorU.x * (d2 + T) });
+                    }
+
+                    if (Math.random() < 0.5) {
+                        const T = 32+64*Math.random();
+                        this.createTree({ x: pt.x + vectorU.y * (d2 + T), y: pt.y - vectorU.x * (d2 + T) });
+                    }
 
                     this.obstacles.add(C1);
                     this.add(C1);
@@ -288,14 +375,17 @@
 
                 }*/
 
-                player = new Car({ x: f(0).x, y: f(0).y, z: 1, color: "red" });
+                player = new Car({ x: f(0).x + 52, y: f(0).y, z: 10, color: "red" });
                 player.pv = 10;
                 this.add(player);
 
-                for (let i = 0; i < 4; i++) {
+                for (let i = 0; i < 3; i++) {
 
-                    const enemy = new Car({ x: f(0).x - 48 + i * 24, y: f(0).y, z: 10, color: randomColor(0, 128, 255) });
+                    const enemy = new Car({ x: f(0).x + 10 - i * 42, y: f(0).y, z: 10, color: randomColor(0, 128, 255) });
                     enemy.live = () => {
+                        if (this.preparation > 0)
+                            return;
+
                         enemy.handleAcceleration();
                         const u = { x: Math.cos(enemy.angle), y: Math.sin(enemy.angle) };
 

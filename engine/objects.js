@@ -62,7 +62,8 @@ export class Circle extends PhysicalObject {
 
 export class Particule extends Circle {
     constructor(option) {
-        option.r = 2;
+        if (option.r == undefined)
+            option.r = 2;
         const sx = randomAmplitude(0.5);
         const sy = 0.7 + randomAmplitude(0.5);
         const sy2 = 0.7 + randomAmplitude(0.5);
