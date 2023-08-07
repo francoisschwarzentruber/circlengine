@@ -1,0 +1,358 @@
+<html>
+
+<head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body,
+        html {
+            background-color: black;
+            height: 100%;
+        }
+
+        canvas {
+            padding: 0;
+            margin: auto;
+            display: block;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-size: 100% 100%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.0/nipplejs.min.js"></script>
+
+</head>
+
+<body>
+    <canvas id="canvas" width="640" height="480">
+    </canvas>
+    <script type="module">
+        /**
+         * scenario: Nemokary
+         * */
+        import Input from "./engine/input.js";
+        import { Game, Scene, CircleEngineLogoScene, TitleScene, GameOverScene } from "./engine/core.js";
+        import {
+            intersects,
+            isInside, ensurePositionInside, bounce, Geometry, moveOutside
+        } from "./engine/physics.js";
+
+        import {
+            Sound
+        } from "./engine/sound.js";
+
+        import {
+            Circle, Particule, MisterSaturn
+        } from "./engine/objects.js";
+
+        import { randomColor, randomAmplitude } from "./engine/random.js";
+
+        import { Music } from "./engine/music.js";
+
+
+
+
+        const A = 0.3;
+        const turnSpeed = 0.02;
+        const decelerationFactor = 0.9;
+
+        class Car extends Circle {
+            constructor({ x, y, color = "red" }) {
+                super({ x, y, r: 16, color });
+                this.angle = -Math.PI / 2;
+            }
+
+            turn(d) {
+                this.angle += d;
+                /*  if (this.platformCurrent) {
+                      const a = Math.atan2(this.position.y - this.platformCurrent.position.y, this.position.x - this.platformCurrent.position.x)
+                      this.speed = Geometry.add(this.speed, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
+                  }
+                  else*/
+            }
+
+            left() { this.turn(-turnSpeed); }
+            right() { this.turn(turnSpeed); }
+            up() {
+                this.acceleration.x += A * Math.cos(this.angle);
+                this.acceleration.y += A * Math.sin(this.angle);
+
+            }
+            down() {
+                this.acceleration.x -= A * Math.cos(this.angle);
+                this.acceleration.y -= A * Math.sin(this.angle);
+            }
+            action() {
+                if (this.platformCurrent) {
+                    Sound.play("jump.ogg");
+
+                    this.acceleration = { x: 0, y: -5 - Math.abs(this.speed.x) };
+                    this.speed = { x: 0, y: 0 };
+                }
+            }
+
+            handleAcceleration() {
+                this.acceleration.x *= decelerationFactor;
+                this.acceleration.y *= decelerationFactor;
+            }
+
+
+            live() {
+                this.handleAcceleration();
+            }
+
+            draw(ctx) {
+                const drawWheel = (p) => {
+                    ctx.fillStyle = "black";
+                    ctx.disk(p.x, p.y, 7);
+                }
+
+                const A1 = Geometry.pointFromCenterRadiusAngle(this.position.x, this.position.y, 9, this.angle);
+                const wheel11 = Geometry.pointFromCenterRadiusAngle(A1.x, A1.y, 9, this.angle + Math.PI / 2);
+                const wheel12 = Geometry.pointFromCenterRadiusAngle(A1.x, A1.y, 9, this.angle - Math.PI / 2);
+
+                const A2 = Geometry.pointFromCenterRadiusAngle(this.position.x, this.position.y, 10, this.angle + Math.PI);
+                const wheel21 = Geometry.pointFromCenterRadiusAngle(A2.x, A2.y, 9, this.angle + Math.PI / 2);
+                const wheel22 = Geometry.pointFromCenterRadiusAngle(A2.x, A2.y, 9, this.angle - Math.PI / 2);
+
+
+                drawWheel(wheel11);
+                drawWheel(wheel12);
+                drawWheel(wheel21);
+                drawWheel(wheel22);
+
+                ctx.fillStyle = this.color;
+
+                const AA = Geometry.pointFromCenterRadiusAngle(this.position.x, this.position.y, 11, this.angle);
+
+                ctx.disk(AA.x, AA.y, 12);
+                super.draw(ctx);
+            }
+        }
+
+
+
+        let player;
+
+
+        class RacerScene extends Scene {
+            constructor() {
+                super();
+                this.obstacles = this.createGroup();
+                this.cars = this.createGroup();
+                this.road = this.createGroup();
+                this.items = this.createGroup();
+            }
+
+
+
+            live(ctx) {
+
+                this.cameraAttach(player);
+                Input.control2DCross(player, { speed: 3 });
+
+                const handleCars = (car) => {
+                    for (const obstacle of this.obstacles) {
+                        if (car != obstacle)
+                            if (intersects(car, obstacle)) {
+                                car.speed.x += obstacle.speed.x;
+                                car.speed.y += obstacle.speed.y;
+                                moveOutside(car, obstacle);
+                            }
+                    }
+                }
+                for (const enemy of this.cars) handleCars(enemy);
+                handleCars(player)
+
+                for (const item of this.items) {
+                    if (intersects(player, item)) {
+                        game.delete(item);
+                    }
+                }
+
+
+
+                for (const car of this.cars)
+                    for (const car2 of this.cars)
+                        if (car != car2)
+                            if (intersects(car, car2)) {
+                                moveOutside(car2, car);
+                            }
+
+                for (const car of this.cars)
+                    if (car != player)
+                        if (intersects(car, player)) {
+                            moveOutside(player, car);
+                        }
+
+
+            }
+
+
+            drawFixed(ctx) {
+                ctx.fillStyle = "black";
+                ctx.fillText((Geometry.norm(player.speed)*30).toFixed(0) + "km/h", 0, 32)
+            }
+        }
+
+
+
+        class Level1Scene extends RacerScene {
+
+            constructor() {
+                super();
+
+                const dt = 0.0012;
+                /*const f = (t) => {
+                    const angle = t * 2 * Math.PI;
+                    return { x: 1640 * Math.cos(angle), y: 1480 * Math.sin(angle) };
+                }*/
+
+                const f = (t) => {
+                    const angle = t * 2 * Math.PI;
+                    const p = { x: 0, y: 0 };
+                    const R = [0, 2000, 100, 100, 200];
+                    const S = [0, 0, -1, 1, 2];
+
+                    for (let i = 0; i < R.length; i++) {
+                        p.x += R[i] * Math.cos(i * angle + S[i]);
+                        p.y += R[i] * Math.sin(i * angle + S[i]);
+
+                    }
+                    return p;
+                }
+
+
+                const width = (t) => {
+                    const angle = t * 4 * Math.PI;
+                    return 32 + 64 * Math.abs(Math.cos(angle));
+                }
+
+
+                for (let t = 0; t < 1; t += dt) {
+                    const pt = f(t);
+
+                    const C = new Circle({
+                        x: pt.x, y: pt.y, r: width(t),
+                        color: randomColor(192, 128, 64, 32),
+                        z: -1,
+                    });
+
+                    this.road.add(C);
+                    this.add(C);
+                }
+
+                for (let t = 0; t < 1; t += dt) {
+                    const pt = f(t);
+                    const ptnext = f(t + dt);
+
+                    const vectorU = Geometry.normalize({ x: ptnext.x - pt.x, y: ptnext.y - pt.y });
+                    const d2 = width(t);
+
+                    const C1 = new Circle({
+                        x: pt.x - vectorU.y * d2, y: pt.y + vectorU.x * d2, r: 8,
+                        color: "#FFFFFFDD",
+                    });
+                    C1.left = true;
+
+                    const C2 = new Circle({
+                        x: pt.x + vectorU.y * d2, y: pt.y - vectorU.x * d2, r: 8,
+                        color: "#FFFFFFDD",
+                    });
+                    C1.right = true;
+
+
+                    this.obstacles.add(C1);
+                    this.add(C1);
+                    this.obstacles.add(C2);
+                    this.add(C2);
+                }
+                const background = new Circle({ x: 0, y: 0, z: -3, color: "#aaaa55", r: 12800 });
+                this.add(background);
+
+                /*
+                for (let x = 0; x < 10000; x += 100) {
+                    const cloud = new Circle({
+                        x: x + 100 * Math.random(),
+                        y: -300 + 500 * Math.random(),
+                        color: "#FFFFFF22", r: 100
+                    });
+                    this.add(cloud);
+
+                }*/
+
+                player = new Car({ x: f(0).x, y: f(0).y, z: 1, color: "red" });
+                player.pv = 10;
+                this.add(player);
+
+                for (let i = 0; i < 4; i++) {
+
+                    const enemy = new Car({ x: f(0).x - 48 + i * 24, y: f(0).y, z: 10, color: randomColor(0, 128, 255) });
+                    enemy.live = () => {
+                        enemy.handleAcceleration();
+                        const u = { x: Math.cos(enemy.angle), y: Math.sin(enemy.angle) };
+
+                        const nextroad = [...this.road].filter((o) =>
+                            (o.position.x - enemy.position.x) * (u.x)
+                            + (o.position.y - enemy.position.y) * (u.y) > 0
+                            && Geometry.distance(o, enemy) < 300
+                        );
+
+                        let v = 0;
+                        /*for (const o of this.road)
+                            o.color = "grey";
+    
+                        for (const o of nextroad) {
+                            o.color = "green";
+                        }*/
+                        for (const o of nextroad) {
+                            v += (o.position.x - enemy.position.x) * (u.y)
+                                - (o.position.y - enemy.position.y) * (u.x);
+                        }
+
+                        if (Math.random() < 0.3)
+                            if (v > 0)
+                                enemy.left()
+                            else
+                                enemy.right();
+                        else {
+                            if (Math.random() < 0.5)
+                                enemy.left()
+                            else
+                                enemy.right();
+                        }
+
+                        enemy.up();
+                    }
+                    this.cars.add(enemy);
+                    this.add(enemy);
+
+                }
+            }
+
+
+            live() {
+                super.live();
+
+            }
+        }
+
+        Game.setScene(new CircleEngineLogoScene(
+            () => Game.setScene(new TitleScene("Save the road",
+                () => Game.setScene(new Level1Scene())
+            )
+            )));
+
+        Game.setScene(new Level1Scene());
+
+    </script>
+</body>
+
+</html>

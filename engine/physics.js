@@ -37,8 +37,14 @@ export class Geometry {
 
     static add(v, v2) { return { x: v.x + v2.x, y: v.y + v2.y }; }
 
+    static norm(v) {
+        return Math.sqrt((v.x) ** 2 + (v.y) ** 2);
+    }
 
-
+    static normalize(v) {
+        const d = Geometry.norm(v);
+        return { x: v.x / d, y: v.y / d };
+    }
     static distance(a, b) {
         if (a.position)
             a = a.position;
