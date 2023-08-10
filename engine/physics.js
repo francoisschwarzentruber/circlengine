@@ -5,14 +5,17 @@ export function isInside(o1, o2) { return Geometry.distance(o1, o2) < o2.r - (o1
 export function ensurePositionInside(o1, collection) {
     if (Array.from(collection).filter((b) => isInside(o1, b)).length > 0)
         return;
-    const cI = Array.from(collection).filter((b) => intersects(o1, b));
+    //const cI = Array.from(collection).filter((b) => intersects(o1, b));
 
-    if (cI.length == 0)
+    const cI = Array.from(collection).sort(
+        (b, b2) => Geometry.distance(o1, b)> Geometry.distance(o1, b2) ? 1 : -1);
+
+   /* if (cI.length == 0)
         return; //too bad
 
     if (cI.length > 1)
         return;
-
+*/
     const o2 = cI[0];
     const angle = Math.atan2(o1.position.y - o2.position.y, o1.position.x - o2.position.x);
     const dr = o2.r - o1.r;
@@ -36,6 +39,7 @@ export class Geometry {
     }
 
     static add(v, v2) { return { x: v.x + v2.x, y: v.y + v2.y }; }
+    static diff(v, v2) { return { x: v2.x - v.x, y: v2.y - v.y }; }
 
     static norm(v) {
         return Math.sqrt((v.x) ** 2 + (v.y) ** 2);

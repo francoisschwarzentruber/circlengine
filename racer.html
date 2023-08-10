@@ -58,15 +58,24 @@
 
 
 
-
+        const preparationInter = 0;//50;
         const A = 0.6;
-        const turnSpeed = 0.02;
+        const turnSpeed = 0.03;
         const decelerationFactor = 0.9;
 
         class Car extends Circle {
-            constructor({ x, y, color = "red" }) {
+            constructor({ x, y, color = "red", accelerationPower = A }) {
                 super({ x, y, r: 16, color });
                 this.angle = -Math.PI / 2;
+                this.accelerationPower = accelerationPower;
+            }
+
+
+            get speedRealNumber() {
+                return this.lastposition ?
+                    Geometry.norm(Geometry.diff(this.position, this.lastposition))
+                    : 0;
+
             }
 
             get direction() {
@@ -92,13 +101,13 @@
             left() { this.turn(-turnSpeed); }
             right() { this.turn(turnSpeed); }
             up() {
-                this.acceleration.x += A * Math.cos(this.angle);
-                this.acceleration.y += A * Math.sin(this.angle);
+                this.acceleration.x += this.accelerationPower * Math.cos(this.angle);
+                this.acceleration.y += this.accelerationPower * Math.sin(this.angle);
 
             }
             down() {
-                this.acceleration.x -= A * Math.cos(this.angle);
-                this.acceleration.y -= A * Math.sin(this.angle);
+                this.acceleration.x -= this.accelerationPower * Math.cos(this.angle);
+                this.acceleration.y -= this.accelerationPower * Math.sin(this.angle);
             }
             action() {
                 this.up();
@@ -177,7 +186,7 @@
                 this.cars = this.createGroup();
                 this.road = this.createGroup();
                 this.items = this.createGroup();
-                this.preparation = 180;
+                this.preparation = preparationInter * 3;
             }
 
 
@@ -185,12 +194,14 @@
             live(ctx) {
 
                 this.cameraAttach(player);
+                if (this.preparation == 0)
+                    this.beginningTime = Date.now();
                 this.preparation--;
 
                 if (this.preparation < 0)
                     Input.control2DCross(player, { speed: 3 });
 
-                const handleCars = (car) => {
+                const handleCars = (car, isPlayer) => {
                     this.add(new Particule({
                         x: car.butt.x + randomAmplitude(8),
                         y: car.butt.y + randomAmplitude(8),
@@ -201,14 +212,18 @@
                     for (const obstacle of this.obstacles) {
                         if (car != obstacle)
                             if (intersects(car, obstacle)) {
+                                if (car == player && player.speedRealNumber > 1)
+                                    Sound.playIfNot("frottement.ogg");
                                 car.speed.x += obstacle.speed.x;
                                 car.speed.y += obstacle.speed.y;
                                 moveOutside(car, obstacle);
                             }
                     }
+
+                    ensurePositionInside(car, this.road);
                 }
                 for (const enemy of this.cars) handleCars(enemy);
-                handleCars(player);
+                handleCars(player, true);
 
                 for (const item of this.items) {
                     if (intersects(player, item)) {
@@ -228,13 +243,13 @@
                 for (const car of this.cars)
                     if (car != player)
                         if (intersects(car, player)) {
+                            Sound.playIfNot("hurt.ogg");
                             moveOutside(player, car);
                         }
 
 
                 for (const c of this.road)
                     if (intersects(c, player)) {
-                        console.log("yes")
                         c.visited = true;
                     }
 
@@ -247,37 +262,56 @@
 
 
             drawFixed(ctx) {
+
+                const speed = player.speedRealNumber;
+
+                ctx.font = "bold 32px sans serif";
+
+                ctx.textAlign = "left";
+
                 ctx.fillStyle = "black";
-                ctx.fillText((Geometry.norm(player.speed) * 30).toFixed(0) + "km/h", 0, 32)
+                ctx.fillText((speed * 30).toFixed(0) + "km/h", 0, 32)
 
                 if (this.preparation < 0)
-                    Music.music.playbackRate = 0.5 + 0.5 * Geometry.norm(player.speed) / 10;
+                    Music.music.playbackRate = 0.5 + 0.5 * speed / 10;
 
-                ctx.fillStyle = "black";
+                if (this.preparation < 0) {
 
-                let time = this.score ? this.score : this.time;
-                const millisec = (time % 1000).toString().padStart(3, '0');
-                time = Math.floor(time / 1000);
-                const secondes = (time % 60).toString().padStart(2, '0');
+                    ctx.fillStyle = "black";
+                    let time = this.score ? this.score : this.time;
+                    const millisec = (time % 1000).toString().padStart(3, '0');
+                    time = Math.floor(time / 1000);
+                    const secondes = (time % 60).toString().padStart(2, '0');
 
-                time = Math.floor(time / 60);
-                const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+                    time = Math.floor(time / 60);
+                    const minutes = time.toString().padStart(2, '0');
 
-                ctx.fillText(minutes + ":" + secondes + ":" + millisec, 450, 32)
+                    ctx.fillText(minutes + ":" + secondes + ":" + millisec, 450, 32)
+
+                }
+
+                const drawMiddleScreen = (txt, a, size = 256) => {
+                    ctx.font = `bold ${size}px sans serif`;
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+                    ctx.strokeStyle = `rgba(0, 0, 0, ${a})`;
+                    ctx.fillText(txt, 320, 320)
+                    ctx.strokeText(txt, 320, 320)
+                }
 
                 if (this.score) {
-                    ctx.fillStyle = "black";
-                    ctx.fillText("Course cleared!", 200, 150)
+                    drawMiddleScreen("Course cleared!", 1, 64)
                 }
 
                 if (this.preparation > 0) {
-                    ctx.fillStyle = "black";
-                    ctx.fillText(Math.floor(this.preparation / 60) + 1, 100, 150)
+                    drawMiddleScreen(Math.floor(this.preparation / preparationInter) + 1, (this.preparation % preparationInter) / preparationInter);
+
                 }
-                else if (this.preparation > -200) {
-                    ctx.fillStyle = "black";
-                    ctx.fillText("Go!", 100, 150)
+                else if (this.preparation > -preparationInter) {
+                    drawMiddleScreen("Go!", 1 - ((preparationInter - this.preparation) % preparationInter) / preparationInter)
                 }
+
+                player.lastposition = { x: player.position.x, y: player.position.y };
             }
         }
 
@@ -287,6 +321,9 @@
 
             constructor() {
                 super();
+                const background = new Circle({ x: 0, y: 0, z: -3, color: "#aaaa55", r: 12800 }); //#aaaa55
+                this.add(background);
+
                 const dt = 0.0012;
                 /*const f = (t) => {
                     const angle = t * 2 * Math.PI;
@@ -313,6 +350,12 @@
                     return 32 + 64 * Math.abs(Math.cos(angle));
                 }
 
+
+                const getAngle = (t) => {
+                    const p2 = f(t + dt);
+                    const p = f(t);
+                    return Math.atan2(p2.y - p.y, p2.x - p.x) + Math.PI;
+                }
 
                 for (let t = 0; t < 1; t += dt) {
                     const pt = f(t);
@@ -346,13 +389,13 @@
                     });
                     C1.right = true;
 
-                    if (Math.random() < 0.5) {
-                        const T = 32+64*Math.random();
+                    if (Math.random() < 0.2) {
+                        const T = 32 + 64 * Math.random();
                         this.createTree({ x: pt.x - vectorU.y * (d2 + T), y: pt.y + vectorU.x * (d2 + T) });
                     }
 
                     if (Math.random() < 0.5) {
-                        const T = 32+64*Math.random();
+                        const T = 32 + 64 * Math.random();
                         this.createTree({ x: pt.x + vectorU.y * (d2 + T), y: pt.y - vectorU.x * (d2 + T) });
                     }
 
@@ -361,8 +404,7 @@
                     this.obstacles.add(C2);
                     this.add(C2);
                 }
-                const background = new Circle({ x: 0, y: 0, z: -3, color: "#aaaa55", r: 12800 });
-                this.add(background);
+
 
                 /*
                 for (let x = 0; x < 10000; x += 100) {
@@ -375,13 +417,18 @@
 
                 }*/
 
-                player = new Car({ x: f(0).x + 52, y: f(0).y, z: 10, color: "red" });
+                player = new Car({ x: f(0).x + 52, y: f(0).y, z: 10, color: "red", accelerationPower: A * 1.05 });
+                player.angle = getAngle(0);
+
                 player.pv = 10;
                 this.add(player);
 
-                for (let i = 0; i < 3; i++) {
+                for (let t = -0.25; t < 0.25; t += dt) if (Math.random() > 0.9) {
 
-                    const enemy = new Car({ x: f(0).x + 10 - i * 42, y: f(0).y, z: 10, color: randomColor(0, 128, 255) });
+                    //const enemy = new Car({ x: f(0).x + 10 - i * 42, y: f(0).y, z: 10, color: randomColor(0, 128, 255) });
+                    const enemy = new Car({ x: f(t).x, y: f(t).y, z: 10, color: randomColor(0, 128, 255) });
+                    enemy.angle = getAngle(t);
+
                     enemy.live = () => {
                         if (this.preparation > 0)
                             return;
@@ -392,7 +439,7 @@
                         const nextroad = [...this.road].filter((o) =>
                             (o.position.x - enemy.position.x) * (u.x)
                             + (o.position.y - enemy.position.y) * (u.y) > 0
-                            && Geometry.distance(o, enemy) < 300
+                            && Geometry.distance(o, enemy) < 200
                         );
 
                         let v = 0;
@@ -407,7 +454,7 @@
                                 - (o.position.y - enemy.position.y) * (u.x);
                         }
 
-                        if (Math.random() < 0.3)
+                        if (Math.random() < 0.5)
                             if (v > 0)
                                 enemy.left()
                             else
