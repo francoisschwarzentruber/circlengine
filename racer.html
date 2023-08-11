@@ -58,16 +58,18 @@
 
 
 
-        const preparationInter = 0;//50;
+        const preparationInter = 37;
         const A = 0.6;
-        const turnSpeed = 0.03;
-        const decelerationFactor = 0.9;
+        const turnSpeed = 0.02;
+        const DECCELERATIONFACTOR_OK = 0.9;
+        const DECCELERATIONFACTOR_OBSTACLE = 0.1;
 
         class Car extends Circle {
             constructor({ x, y, color = "red", accelerationPower = A }) {
                 super({ x, y, r: 16, color });
                 this.angle = -Math.PI / 2;
                 this.accelerationPower = accelerationPower;
+                this.decelerationFactor = DECCELERATIONFACTOR_OK;
             }
 
 
@@ -114,8 +116,8 @@
             }
 
             handleAcceleration() {
-                this.acceleration.x *= decelerationFactor;
-                this.acceleration.y *= decelerationFactor;
+                this.acceleration.x *= this.decelerationFactor;
+                this.acceleration.y *= this.decelerationFactor;
             }
 
 
@@ -164,7 +166,7 @@
                     x, y: y + 8, z: -0.5, color: '#00FF00', r: 12,
                 });
                 this.add(c);
-                this.obstacles.add(c);
+                this.border.add(c);
                 const r = 16 + randomAmplitude(8);
                 for (let i = 0; i < 4; i++)
                     this.add(new Circle({
@@ -182,7 +184,7 @@
                 super();
                 Music.play("Gyorgy Cziffra - Liszt Grand Galop Chromatique -(128kbps).ogg")
 
-                this.obstacles = this.createGroup();
+                this.border = this.createGroup();
                 this.cars = this.createGroup();
                 this.road = this.createGroup();
                 this.items = this.createGroup();
@@ -209,19 +211,26 @@
                         color: randomColorAlpha(64, 64, 64, 0.05)
                     }));
 
-                    for (const obstacle of this.obstacles) {
+                    car.decelerationFactor = DECCELERATIONFACTOR_OK;
+
+                    for (const obstacle of this.border) {
                         if (car != obstacle)
                             if (intersects(car, obstacle)) {
-                                if (car == player && player.speedRealNumber > 1)
-                                    Sound.playIfNot("frottement.ogg");
-                                car.speed.x += obstacle.speed.x;
-                                car.speed.y += obstacle.speed.y;
+                                //  obstacle.color = "black";
+                                /* if (car == player && player.speedRealNumber > 1)
+                                     Sound.playIfNot("frottement.ogg");
+                                 */
+                                car.decelerationFactor = DECCELERATIONFACTOR_OBSTACLE;
                                 moveOutside(car, obstacle);
                             }
                     }
 
                     ensurePositionInside(car, this.road);
                 }
+
+                /*   for (const obstacle of this.border)
+                       obstacle.color = "white";
+                  */
                 for (const enemy of this.cars) handleCars(enemy);
                 handleCars(player, true);
 
@@ -370,21 +379,22 @@
                     this.add(C);
                 }
 
-                for (let t = 0; t < 1; t += dt) {
+                for (let t = 0; t < 1-dt; t += dt) {
                     const pt = f(t);
                     const ptnext = f(t + dt);
 
                     const vectorU = Geometry.normalize({ x: ptnext.x - pt.x, y: ptnext.y - pt.y });
                     const d2 = width(t);
 
+                    const radiusBorder = 4;
                     const C1 = new Circle({
-                        x: pt.x - vectorU.y * d2, y: pt.y + vectorU.x * d2, r: 8, z: -1 + t + 0.01,
+                        x: pt.x - vectorU.y * d2, y: pt.y + vectorU.x * d2, r: radiusBorder, z: -1 + t + 0.01,
                         color: Math.abs(t) < dt ? "black" : "#FFFFFFDD",
                     });
                     C1.left = true;
 
                     const C2 = new Circle({
-                        x: pt.x + vectorU.y * d2, y: pt.y - vectorU.x * d2, r: 8, z: -1 + t + 0.01,
+                        x: pt.x + vectorU.y * d2, y: pt.y - vectorU.x * d2, r: radiusBorder, z: -1 + t + 0.01,
                         color: Math.abs(t) < dt ? "black" : "#FFFFFFDD",
                     });
                     C1.right = true;
@@ -399,9 +409,9 @@
                         this.createTree({ x: pt.x + vectorU.y * (d2 + T), y: pt.y - vectorU.x * (d2 + T) });
                     }
 
-                    this.obstacles.add(C1);
+                    this.border.add(C1);
                     this.add(C1);
-                    this.obstacles.add(C2);
+                    this.border.add(C2);
                     this.add(C2);
                 }
 
@@ -487,7 +497,12 @@
             )
             )));
 
-        Game.setScene(new Level1Scene());
+        //  Game.setScene(new Level1Scene());
+        Game.setScene(new CircleEngineLogoScene(
+            () =>
+                Game.setScene(
+                    new TitleScene("The Liszt's \n Grand Galop \n Chromatique Race",
+                        () => Game.setScene(new Level1Scene(player))))));
 
     </script>
 </body>

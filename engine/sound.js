@@ -30,8 +30,13 @@ export class Sound {
         if (this.sounds[name] == undefined)
             this.sounds[name] = new Audio('./sounds/' + name);
 
-        if (this.sounds[name].paused)
+        if (this.sounds[name].paused) {
             this.sounds[name].play();
+
+        }
+
+
+
 
     }
 }

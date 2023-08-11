@@ -154,7 +154,7 @@ export class TitleScene extends Scene {
 
         }
         ctx.font = " 15px sans serif";
-        ctx.fillText("Press enter to start", 320, 300);
+        ctx.fillText("Press enter to start", 320, 300 -48 + lines.length * 48);
         ctx.textAlign = "left";
 
     }
