@@ -1,0 +1,339 @@
+<html>
+
+<head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body,
+        html {
+            background-color: black;
+            height: 100%;
+        }
+
+        canvas {
+            padding: 0;
+            margin: auto;
+            display: block;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-size: 100% 100%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.0/nipplejs.min.js"></script>
+
+</head>
+
+<body>
+    <canvas id="canvas" width="640" height="480">
+    </canvas>
+    <script type="module">
+        /**
+         * scenario: Nemokary
+         * */
+        import Input from "./engine/input.js";
+        import { Game, Scene, CircleEngineLogoScene, TitleScene, GameOverScene } from "./engine/core.js";
+        import {
+            intersects,
+            isInside, ensurePositionInside, bounce, Geometry, moveOutside
+        } from "./engine/physics.js";
+
+        import {
+            Sound
+        } from "./engine/sound.js";
+
+        import {
+            Circle, Particule, MisterSaturn
+        } from "./engine/objects.js";
+
+        import { randomColor,randomColorAlpha, randomAmplitude } from "./engine/random.js";
+
+        import { Music } from "./engine/music.js";
+
+
+
+
+        const gravity = 3
+        const speed = 3;
+
+        class MisterSaturnPlatform extends MisterSaturn {
+            constructor({ x, y, color }) {
+                super({ x, y, color });
+                this.direction = { x: 1, y: 0 };
+
+            }
+
+            go(d) {
+
+                this.direction = { x: d, y: 0 };
+                if (this.currentPlanet) {
+                    const a = Math.atan2(this.position.y - this.currentPlanet.position.y, this.position.x - this.currentPlanet.position.x)
+                    this.acceleration = Geometry.add(this.acceleration, { x: -speed * d * Math.sin(a), y: speed * d * Math.cos(a) });
+                }
+                else
+                    this.acceleration = { x: speed * d, y: 0 };
+            }
+
+            left() { this.go(-1); }
+            right() { this.go(1); }
+            up() { }
+            down() { }
+
+            draw(ctx) {
+                const a = Math.PI / 2 + Math.atan2(this.position.y - this.nearestPlanet.position.y, this.position.x - this.nearestPlanet.position.x)
+                ctx.save();
+                ctx.translate(this.position.x, this.position.y)
+                ctx.rotate(a);
+                ctx.translate(-this.position.x, -this.position.y)
+                super.draw(ctx);
+                ctx.restore();
+            }
+            action() {
+
+                if (this.currentPlanet) {
+                    const a = Math.atan2(this.position.y - this.currentPlanet.position.y, this.position.x - this.currentPlanet.position.x)
+
+                    this.acceleration = Geometry.pointFromRadiusAngle(3, a)//{ x: 0, y: -5 - Math.abs(this.speed.x) };
+                    this.speed = { x: 0, y: 0 };
+                }
+            }
+
+            live() {
+                if (this.nearestPlanet) {
+                    const a = Math.atan2(this.position.y - this.nearestPlanet.position.y, this.position.x - this.nearestPlanet.position.x)
+                    this.acceleration = Geometry.pointFromRadiusAngle(-3, a);
+                }
+                else
+                    this.acceleration = { x: 0, y: 0 };
+            }
+        }
+
+
+
+        class Enemy extends MisterSaturnPlatform {
+            constructor({ x, y, color = "green" }) {
+                super({ x, y, color });
+                this.direction = { x: 1, y: 0 };
+            }
+
+            live() {
+                super.live();
+                if (Math.random() < 0.05)
+                    this.direction.x = -this.direction.x;
+
+                if (this.direction.x < 0)
+                    this.left();
+                else
+                    this.right();
+            }
+
+        }
+
+
+
+
+
+        class Vortex extends Circle {
+            constructor({ x, y }) {
+                super({ x, y, color: "blue", r: 32 });
+            }
+
+            draw(ctx) {
+                super.draw(ctx);
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillStyle = randomColor(128, 0, 255);
+                    ctx.disk(this.position.x, this.position.y, this.r * (8 - i) / 8);
+                }
+            }
+        }
+
+        let player;
+
+
+        class PlatformerScene extends Scene {
+            constructor() {
+                super();
+                this.planets = this.createGroup();
+                this.enemies = this.createGroup();
+                this.plateforms = this.createGroup();
+                this.obstacles = this.createGroup();
+                this.items = this.createGroup();
+                this.doors = this.createGroup();
+            }
+
+
+
+            live(ctx) {
+                if (player.pv == 0) {
+                    player.coins = 0;
+                    Game.setScene(new GameOverScene());
+                }
+
+                this.cameraAttach(player);
+                Input.control2DCross(player, { speed: 3 });
+
+                const handleMister = (mister) => {
+
+                    for (const obstacle of this.obstacles) {
+                        if (mister != obstacle)
+                            if (intersects(mister, obstacle)) {
+                                mister.speed.x += obstacle.speed.x;
+                                mister.speed.y += obstacle.speed.y;
+                                moveOutside(mister, obstacle);
+                                mister.currentPlanet = obstacle;
+                            }
+                    }
+
+                    let d = 100000000;
+                    for (const planet of this.planets) {
+                        if (Geometry.distance(planet, mister) < d) {
+                            d = Geometry.distance(planet, mister);
+                            mister.nearestPlanet = planet;
+                        }
+
+                    }
+
+                    if (mister.currentPlanet == undefined)
+                        mister.currentPlanet = mister.nearestPlanet;
+
+                    for (const planet of this.planets) {
+                        if (intersects(mister, planet)) {
+                            mister.speed.x += planet.speed.x;
+                            mister.speed.y += planet.speed.y;
+                            moveOutside(mister, planet);
+                            mister.currentPlanet = planet;
+                        }
+                    }
+                }
+                for (const enemy of this.enemies) handleMister(enemy);
+                handleMister(player)
+
+                for (const item of this.items) {
+                    if (intersects(player, item)) {
+                        game.delete(item);
+                        player.coin++;
+                    }
+                }
+
+                for (const enemy of this.enemies)
+                    if (enemy.position.y > 500)
+                        enemy.delete();
+
+                for (const enemy of this.enemies)
+                    for (const enemy2 of this.enemies)
+                        if (enemy != enemy2)
+                            if (intersects(enemy, enemy2)) {
+                                moveOutside(enemy2, enemy);
+                            }
+                for (const enemy of this.enemies)
+                    if (intersects(player, enemy)) {
+                        moveOutside(player, enemy);
+
+                        if (player.position.y < enemy.position.y - 16) {
+                            enemy.delete();
+                            Sound.play("smash.ogg");
+
+                            player.acceleration.y = -5;
+                            for (let i = 0; i < 10; i++)
+                                this.add(new Particule({ x: player.position.x, y: player.position.y, color: enemy.color }));
+
+                        }
+                        else
+                            if (!player.hurt) {
+                                Sound.play("hurt.ogg");
+
+                                for (let i = 0; i < 10; i++)
+                                    this.add(new Particule({ x: player.position.x, y: player.position.y, color: player.color }));
+                                player.pv--;
+                            }
+                        setTimeout(() => player.hurt = false, 1000);
+                        player.hurt = true;
+                    }
+
+
+
+            }
+
+
+            drawFixed(ctx) {
+                for (let i = 0; i < player.pv; i++) {
+                    ctx.fillStyle = "red";
+                    ctx.disk(16 + 24 * i, 16, 10);
+                }
+            }
+        }
+        function createStars(scene) {
+            for (let i = 0; i < 5000; i++) {
+                const x = -500 + Math.random() * 2000;
+                const y = -500 + Math.random() * 2000;
+                scene.add(new Circle({ x, y, color: "white", z: -1, r: Math.random() * 2, }))
+            }
+        }
+
+
+        class Level1Scene extends PlatformerScene {
+
+            constructor() {
+                super();
+
+                createStars(this)
+
+
+                player = new MisterSaturnPlatform({ x: 400, y: 400, color: "red" });
+                player.pv = 10;
+                this.add(player)
+                let x = -132;
+                let y = 0;
+
+                for (let i = 0; i < 20; i++) {
+                    const { x, y } = Geometry.generateFarest(() => ({ x: 200 + Math.random() * 1000, y: 200 + Math.random() * 1000 }), this.planets);
+                    const r = 32 + 64 * Math.random();
+
+                    for (let i = 0; i < 5; i++) {
+                        const pos = Geometry.pointFromRadiusAngle(2*r/3, Math.random() * 2 * Math.PI);
+                        const decoration = new Circle({ x:x+pos.x, y:y+pos.y, r: r*Math.random(), z:-1, color: randomColorAlpha(128, 255, 255, 0.1,255) });
+
+                        this.add(decoration);
+                    }
+                    const planet = new Circle({ x, y, r, color: randomColor(0, 255, 64, 255) });
+                    this.planets.add(planet);
+                    this.add(planet);
+                }
+
+                this.winZone = new Vortex({ x: x - 32, y: -50 });
+                this.add(this.winZone);
+            }
+
+
+            live() {
+                super.live();
+
+                if (this.enemies.size == 0 && !this.isRaining) {
+                    Music.play("rain.mp3");
+                    this.isRaining = true;
+                }
+
+                if (intersects(player, this.winZone) && this.enemies.size == 0) {
+                    Game.setScene(new Level1Scene());
+                }
+            }
+        }
+
+        Game.setScene(new CircleEngineLogoScene(
+            () => Game.setScene(new TitleScene("Save the rain",
+                () => Game.setScene(new Level1Scene())
+            )
+            )));
+
+        Game.setScene(new Level1Scene());
+
+    </script>
+</body>
+
+</html>
