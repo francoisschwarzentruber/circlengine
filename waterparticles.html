@@ -277,68 +277,53 @@
         }
 
 
-        class Level1Scene extends PlatformerScene {
+        class Level1Scene extends Scene {
 
             constructor() {
                 super();
 
-                createStars(this)
+                this.cameraAttach(new Circle({ x: 100, y: 0 }));
+                this.particles = this.createGroup();
 
-
-                player = new MisterSaturnPlatform({ x: 400, y: 400, color: "red" });
-                player.pv = 10;
-                this.add(player)
-                let x = -132;
-                let y = 0;
-
-                for (let i = 0; i < 15; i++) {
-                    const { x, y } = Geometry.generateFarest(() => ({ x: 200 + Math.random() * 1000, y: 200 + Math.random() * 1000 }), this.planets);
-                    const r = 64 + 32 * Math.random();
-
-                    for (let i = 0; i < 5; i++) {
-                        const pos = Geometry.pointFromRadiusAngle(2 * r / 3, Math.random() * 2 * Math.PI);
-                        const decoration = new Circle({ x: x + pos.x, y: y + pos.y, r: r * Math.random(), z: -1, color: randomColorAlpha(128, 255, 255, 0.1, 255) });
-
-                        this.add(decoration);
-                    }
-                    const planet = new Circle({
-                        x, y, r, color: randomColor(0, 255, 64, 255), live: () => {
-                            /* if(planet != player.currentPlanet)
-                             planet.r = r +0.2*Math.cos(planet.time/50);*/
-                        }
-                    });
-                    this.planets.add(planet);
-                    this.add(planet);
-
-                    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
-
-                        const item = new Circle({
-                            x, y, r: 6, color: "yellow", live: () => {
-                                item.position = Geometry.add({ x, y }, Geometry.pointFromRadiusAngle(r + 64, a + this.time / 5000));
-                            }
-                        })
-                        this.items.add(item);
-                        this.add(item);
-
-                    }
+                for (let i = 0; i < 300; i++) {
+                    const particle = new Circle({ x: 100 * Math.random(), y: 100 * Math.random(), r: 6, color: "lightblue" });
+                    this.particles.add(particle);
+                    this.add(particle);
                 }
 
-                this.winZone = new Vortex({ x: x - 32, y: -50 });
-                this.add(this.winZone);
             }
 
 
             live() {
                 super.live();
 
-                if (this.enemies.size == 0 && !this.isRaining) {
-                    Music.play("rain.mp3");
-                    this.isRaining = true;
+                for (const obstacle of this.particles) {
+                    obstacle.position.x += 2 * (Math.random() - 0.5);
+                    obstacle.position.y += Math.random();
                 }
 
-                if (intersects(player, this.winZone) && this.enemies.size == 0) {
-                    Game.setScene(new Level1Scene());
+
+                for (const obstacle of this.particles)
+                    for (const obstacle2 of this.particles) {
+                        if (obstacle2 != obstacle)
+                            if (intersects(obstacle2, obstacle)) {
+                                moveOutside(obstacle2, obstacle);
+                            }
+                    }
+
+
+                const f = (x) => 300*(x/100)**2;
+                for (const obstacle of this.particles) {
+                    if (obstacle.position.x < -100)
+                        obstacle.position.x = -100;
+                    if (obstacle.position.x > 100)
+                        obstacle.position.x = 100;
+                    if (obstacle.position.y > 0)
+                        obstacle.position.y = 0;
+                    if (-obstacle.position.y > f(obstacle.position.x))
+                        obstacle.position.y = -f(obstacle.position.x);
                 }
+
             }
         }
 
