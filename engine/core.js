@@ -1,9 +1,10 @@
 function* DFS(node) {
     if (node instanceof Object) {
+        yield node;
         for (const attr in node)
             if (node[attr] != undefined)
                 yield* DFS(node[attr]);
-        yield node;
+
     }
 }
 
@@ -35,6 +36,15 @@ export default class Engine {
     static newId() {
         return Math.floor(Math.random() * 1000000);
     }
+
+
+    static some(predicate) {
+        for (const Y of DFS(Engine.data))
+            if (predicate(Y))
+                return true;
+        return false;
+    }
+
 }
 
 
@@ -48,7 +58,6 @@ function step() {
         const gen = DFS(Engine.data);
         for (const X of gen) {
             r(X, Engine.data)
-
         }
     }
     for (const r of rules2) {
@@ -59,9 +68,10 @@ function step() {
     }
 }
 
-
+const ctx = canvas.getContext("2d");
 function animate() {
-    canvas.getContext("2d").clearRect(0, 0, 640, 480);
+    ctx.resetTransform();
+    ctx.clearRect(0, 0, 640, 480);
     requestAnimationFrame(animate);
     step();
 }

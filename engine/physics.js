@@ -50,6 +50,7 @@ Engine.addRule((X) => {
 
 /** collisions */
 
+Engine.addRule((X) => X.onground = Engine.some((Y) => Y.solid && Y.fixed && intersects(X, Y) && (X.position.y < Y.position.y)));
 
 Engine.addRule((X, Y) => {
     if (X != Y)
