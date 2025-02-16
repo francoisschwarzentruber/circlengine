@@ -1,235 +1,71 @@
-import Input from "./input.js";
-
-const ctx = canvas.getContext("2d");
-const beginningTime = Date.now();
-
-
-
-export class Scene {
-
-    constructor() {
-        this.beginningTime = Date.now();
-    }
-
-    objects = [];
-    cameraFollows = undefined;
-    drawFixed(ctx) { }
-
-    draw(ctx) {
-        ctx.resetTransform();
-        ctx.clearRect(0, 0, 640, 480);
-
-        if (this.cameraFollows)
-            ctx.translate(-this.cameraFollows.position.x + 320, -this.cameraFollows.position.y + 240);
-
-        this.objects.sort((o1, o2) => (o1.z > o2.z || ((o1.z == o2.z) && (o1.position.y > o2.position.y)) ? 1 : -1));
-
-        if (!Game.isPause)
-            for (const o of this.objects) o._live(ctx);
-        for (const o of this.objects) o.draw(ctx);
-
-        for (const o of this.objects)
-            if (o.isDeleted)
-                this.delete(o);
-
-    }
-
-
-    cameraAttach(o) {
-        this.cameraFollows = o;
-    }
-
-    live() { }
-
-    get time() { return Date.now() - this.beginningTime; }
-
-    pause() {
-        this.isPause = true;
-    }
-
-    groups = [];
-
-    createGroup() {
-        const G = new Set();
-        this.groups.push(G);
-        return G;
-    }
-
-    delete(obj) {
-        this.objects.splice(this.objects.indexOf(obj), 1);
-        for (const G of this.groups)
-            G.delete(obj);
-    }
-
-
-    add(obj) {
-        this.objects.push(obj);
+function* DFS(node) {
+    if (node instanceof Object) {
+        for (const attr in node)
+            if (node[attr] != undefined)
+                yield* DFS(node[attr]);
+        yield node;
     }
 }
 
-CanvasRenderingContext2D.prototype.clear = function () {
-    this.clearRect(0, 0, 640, 480);
-}
 
-CanvasRenderingContext2D.prototype.point = function (x, y) {
-    this.beginPath();
-    this.arc(x, y, 1, 0, 2 * Math.PI);
-    this.fill();
-}
+const rules1 = [];
+const rules2 = [];
+const rulesGlobal = [];
 
-CanvasRenderingContext2D.prototype.circle = function (x, y, r) {
-    this.beginPath();
-    this.arc(x, y, r, 0, 2 * Math.PI);
-}
+export default class Engine {
+    static data = {};
 
-CanvasRenderingContext2D.prototype.disk = function (x, y, r) {
-    this.beginPath();
-    this.arc(x, y, r, 0, 2 * Math.PI);
-    this.fill();
-}
+    static addRule(f) {
+        const str = f.toString();
 
-CanvasRenderingContext2D.prototype.line = function (x1, y1, x2, y2) {
-    this.beginPath();
-    this.moveTo(x1, y1);
-    this.lineTo(x2, y2);
-    this.stroke();
-}
+        if (str.startsWith("(X)"))
+            rules1.push(f);
+        else if (str.startsWith("(X, G)"))
+            rules1.push(f);
+        else if (str.startsWith("(G)"))
+            rulesGlobal.push(f);
+        else if (str.startsWith("(X, Y)"))
+            rules2.push(f);
+        else if (str.startsWith("(X, Y, G)"))
+            rules2.push(f);
+        else
+            console.error("signature of a rule unclear");
+    }
 
-
-
-CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-    if (w < 2 * r) r = w / 2;
-    if (h < 2 * r) r = h / 2;
-    this.beginPath();
-    this.moveTo(x + r, y);
-    this.arcTo(x + w, y, x + w, y + h, r);
-    this.arcTo(x + w, y + h, x, y + h, r);
-    this.arcTo(x, y + h, x, y, r);
-    this.arcTo(x, y, x + w, y, r);
-    this.closePath();
-}
-
-CanvasRenderingContext2D.prototype.arrow = function (x, y, angle, S = 16, A = 0.3) {
-    ctx.beginPath();
-    ctx.moveTo(x - S * Math.cos(angle - A), y - S * Math.sin(angle - A));
-    ctx.lineTo(x, y);
-    ctx.lineTo(x - S * Math.cos(angle + A), y - S * Math.sin(angle + A));
-}
-
-
-
-
-export class GameOverScene extends Scene {
-    draw(ctx) {
-        ctx.fillStyle = "white";
-        ctx.font = "bold 48px serif";
-        ctx.fillText("Game over", 100, 200);
+    static newId() {
+        return Math.floor(Math.random() * 1000000);
     }
 }
 
-let debug = true;
-export class TitleScene extends Scene {
 
-    constructor(title, startFunction) {
-        super();
-        this.title = title;
-        this.startFunction = startFunction;
-    }
+window.data = Engine.data;
 
-    live() {
-        if (this.time > 500 && Input.isAction())
-            this.startFunction();
-    }
-    draw(ctx) {
-        ctx.clear();
-        console.log("draw Title whereas " + Game.iTransition);
-        if (debug) console.trace();
-        debug = false;
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.font = "bold 48px sans serif";
-        const lines = this.title.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            ctx.fillText(lines[i], 320, 200 + i * 48);
+function step() {
+    for (const r of rulesGlobal)
+        r(Engine.data);
+
+    for (const r of rules1) {
+        const gen = DFS(Engine.data);
+        for (const X of gen) {
+            r(X, Engine.data)
 
         }
-        ctx.font = " 15px sans serif";
-        ctx.fillText("Press enter to start", 320, 300 -48 + lines.length * 48);
-        ctx.textAlign = "left";
-
+    }
+    for (const r of rules2) {
+        for (const X of DFS(Engine.data))
+            for (const Y of DFS(Engine.data)) {
+                r(X, Y, Engine.data);
+            }
     }
 }
-
-
-export class CircleEngineLogoScene extends Scene {
-    constructor(future) {
-        super();
-        this.future = future;
-    }
-
-    live() {
-        if (this.time > 500 && Input.isAction())
-            this.future();
-        if (this.time > 2000)
-            this.future();
-    }
-    draw(ctx) {
-        ctx.fillStyle = "white";
-        ctx.disk(250, 240, Math.min(32, this.time * 0.05));
-
-        ctx.font = "bold 32px sans serif";
-        ctx.fillText("engine", 290, 250);
-    }
-}
-
-
-export class Game {
-    static iTransition = 0;
-    static scene = undefined;
-
-    static setScene(scene) {
-        if (Game.scene && !(scene instanceof CircleEngineLogoScene))
-            Game.iTransition = 1;
-        Game.scene = scene;
-    }
-
-
-    static draw(ctx) {
-        if (Game.iTransition == 0) {
-            Game.scene.live();
-
-            if (Game.iTransition == 0)
-                Game.scene.draw(ctx);
-            ctx.resetTransform();
-            Game.scene.drawFixed(ctx);
-        } else {
-            ctx.fillStyle = "#00000022";
-            ctx.fillRect(0, 0, 640, 480);
-            Game.iTransition++;
-
-            if (Game.iTransition > 20)
-                Game.iTransition = 0;
-        }
-    }
-}
-
-
-Game.setScene(new CircleEngineLogoScene(() => { }));
 
 
 function animate() {
+    canvas.getContext("2d").clearRect(0, 0, 640, 480);
     requestAnimationFrame(animate);
-    const ctx = canvas.getContext("2d");
-    Game.draw(ctx);
+    step();
 }
 
 animate();
-
-
-
-
-
-
-
 
 

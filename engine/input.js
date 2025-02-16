@@ -2,30 +2,27 @@
  * CONTROLLING VIA KEYBOARD, NIPPLEJS and GAMEPAD
  */
 
+import Engine from "./core.js";
 
+Engine.data.keyboard = {};
 
 export default class Input {
     static keys = [];
 
     static isAction() { return Input.keys[" "]; }
 
-    static control2DCross(object) {
-        if (Input.keys["ArrowLeft"])
-            object.left();
-        if (Input.keys["ArrowRight"])
-            object.right();
-        if (Input.keys["ArrowUp"])
-            object.up();
-        if (Input.keys["ArrowDown"])
-            object.down();
-        if (Input.keys[" "])
-            object.action();
+    static dispatch() {
+        Engine.data.keyboard.left = Input.keys["ArrowLeft"];
+        Engine.data.keyboard.up = Input.keys["ArrowUp"];
+        Engine.data.keyboard.down = Input.keys["ArrowDown"];
+        Engine.data.keyboard.right = Input.keys["ArrowRight"];
+        Engine.data.keyboard.action = Input.keys[" "];
     }
 }
 
 
-window.onkeydown = (evt) => Input.keys[evt.key] = true;
-window.onkeyup = (evt) => Input.keys[evt.key] = false;
+window.onkeydown = (evt) => { Input.keys[evt.key] = true; Input.dispatch(); }
+window.onkeyup = (evt) => { Input.keys[evt.key] = false; Input.dispatch(); }
 
 
 
@@ -51,7 +48,7 @@ try {
     });
 
     s.on("move", (evt, nipple) => {
-       // console.log(nipple.angle.degree)
+        // console.log(nipple.angle.degree)
         const THRESHOLD = 32;
         Input.keys["ArrowUp"] = (Math.abs(nipple.angle.degree - 90) < THRESHOLD);
         Input.keys["ArrowDown"] = (Math.abs(nipple.angle.degree - 270) < THRESHOLD);
@@ -84,6 +81,7 @@ requestAnimationFrame(
         const gamepad = gamepads[0];
 
         Input.keys[" "] = gamepad.buttons[0].pressed;
+        Input.dispatch();
     }
 );
 
