@@ -54,12 +54,14 @@ try {
         Input.keys["ArrowDown"] = (Math.abs(nipple.angle.degree - 270) < THRESHOLD);
         Input.keys["ArrowLeft"] = (Math.abs(nipple.angle.degree - 180) < THRESHOLD);
         Input.keys["ArrowRight"] = (Math.abs(nipple.angle.degree - 0) < THRESHOLD) || (Math.abs(nipple.angle.degree - 360) < THRESHOLD);
+        Input.dispatch();
     });
     s.on("end", (evt, nipple) => {
         Input.keys["ArrowUp"] = false;
         Input.keys["ArrowDown"] = false;
         Input.keys["ArrowLeft"] = false;
         Input.keys["ArrowRight"] = false;
+        Input.dispatch();
     });
 
     elementButton.onmousedown = () => Input.keys[" "] = true;

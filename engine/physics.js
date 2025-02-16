@@ -1,5 +1,5 @@
 import Engine from "./core.js";
-import { intersects, moveOutside } from "./physicsHelper.js";
+import { intersects, moveOutside, bounce } from "./physicsHelper.js";
 
 
 /****** acceleration and velocity */
@@ -56,5 +56,12 @@ Engine.addRule((X, Y) => {
     if (X != Y)
         if (X.solid && !X.fixed && Y.solid && Y.fixed && intersects(X, Y)) {
             moveOutside(X, Y);
+        }
+});
+
+Engine.addRule((X, Y) => {
+    if (X != Y)
+        if (X.solid && !X.fixed && Y.solid && !Y.fixed && intersects(X, Y)) {
+            bounce(X, Y);
         }
 });
