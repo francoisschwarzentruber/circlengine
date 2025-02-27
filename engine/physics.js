@@ -50,18 +50,25 @@ Engine.addRule((X) => {
 
 /** collisions */
 
-Engine.addRule((X) => X.onground = Engine.some((Y) => Y.solid && Y.fixed && intersects(X, Y) && (X.position.y < Y.position.y)));
+//Engine.addRule((X) => X.onground = Engine.some((Y) => Y.solid && Y.fixed && intersects(X, Y) && (X.position.y < Y.position.y)));
 
-Engine.addRule((X, Y) => {
-    if (X != Y)
-        if (X.solid && !X.fixed && Y.solid && Y.fixed && intersects(X, Y)) {
-            moveOutside(X, Y);
-        }
+
+Engine.addRule(() => {
+    for (const X of Engine.objects)
+        if (X.solid && !X.fixed)
+            for (const Y of Engine.objects)
+                if (X != Y)
+                    if (Y.solid && Y.fixed && intersects(X, Y)) {
+                        moveOutside(X, Y);
+                    }
 });
 
-Engine.addRule((X, Y) => {
-    if (X != Y)
-        if (X.solid && !X.fixed && Y.solid && !Y.fixed && intersects(X, Y)) {
-            bounce(X, Y);
-        }
+Engine.addRule(() => {
+    for (const X of Engine.objects)
+        if (X.solid && !X.fixed)
+            for (const Y of Engine.objects)
+                if (X != Y)
+                    if (Y.solid && !Y.fixed && intersects(X, Y)) {
+                        bounce(X, Y);
+                    }
 });

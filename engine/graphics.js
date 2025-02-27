@@ -19,6 +19,7 @@ CanvasRenderingContext2D.prototype.point = function (x, y) {
 CanvasRenderingContext2D.prototype.circle = function (x, y, r) {
     this.beginPath();
     this.arc(x, y, r, 0, 2 * Math.PI);
+    this.stroke();
 }
 
 CanvasRenderingContext2D.prototype.disk = function (x, y, r) {
@@ -31,6 +32,7 @@ CanvasRenderingContext2D.prototype.line = function (x1, y1, x2, y2) {
     this.beginPath();
     this.moveTo(x1, y1);
     this.lineTo(x2, y2);
+    this.closePath();
     this.stroke();
 }
 
@@ -63,6 +65,9 @@ Engine.addRule((X) => {
     if (X.disk && X.position && X.color) {
         ctx.fillStyle = X.color;
         ctx.disk(X.position.x, X.position.y, X.radius);
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.circle(X.position.x, X.position.y, X.radius);
     }
 });
 
@@ -70,6 +75,9 @@ Engine.addRule((X) => {
     if (X.disk && X.position && X.color && (X.z == 1)) {
         ctx.fillStyle = X.color;
         ctx.disk(X.position.x, X.position.y, X.radius);
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.circle(X.position.x, X.position.y, X.radius);
     }
 });
 
